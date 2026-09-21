@@ -5,6 +5,7 @@ fileanalysis/__init__.py
 fileanalysis/cli.py
 fileanalysis/loader.py
 fileanalysis/mcp_server.py
+fileanalysis/pipeline.py
 fileanalysis.egg-info/PKG-INFO
 fileanalysis.egg-info/SOURCES.txt
 fileanalysis.egg-info/dependency_links.txt
