@@ -1,3 +1,33 @@
-"""FileAnalysis — CLI-based malware file analysis and threat assessment tool."""
+"""MalOwn — Malware Threat Analysis Tool.
 
-__version__ = "1.0.0"
+By Matan Mishali (matantan55).
+"""
+
+from fileanalysis.analyzers.base import (
+    AnalysisResult,
+    RiskLevel,
+    ThreatCategory,
+    Indicator,
+    Capability,
+    YaraMatch,
+    IOC,
+    SignatureInfo,
+    ArchiveMemberResult,
+)
+from fileanalysis.pipeline import analyze, run_pipeline
+
+__version__ = "1.1.0"
+__all__ = [
+    "analyze",
+    "run_pipeline",
+    "AnalysisResult",
+    "RiskLevel",
+    "ThreatCategory",
+    "Indicator",
+    "Capability",
+    "YaraMatch",
+    "IOC",
+    "SignatureInfo",
+    "ArchiveMemberResult",
+    "__version__",
+]

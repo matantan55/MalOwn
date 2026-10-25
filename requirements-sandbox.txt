@@ -6,7 +6,6 @@ puremagic
 lief
 ppdeep
 numpy
-google-genai>=0.1.2
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 lightgbm>=4.0.0

@@ -118,6 +118,40 @@ class TerminalReporter:
             self.console.print()
 
 
+        # Authenticode Signature Check (Windows PE)
+        if result.signature_info and result.signature_info.has_signature:
+            sig = result.signature_info
+            status_text = "[bold green]INTACT / VALID[/]" if sig.is_intact else "[bold red]TAMPERED / INVALID[/]"
+            self.console.print(f"[bold] Authenticode Signature:[/] {status_text}")
+            if sig.signer_name:
+                self.console.print(f"  • [bold]Signer:[/] {sig.signer_name}")
+            if sig.issuer_name:
+                self.console.print(f"  • [bold]Issuer:[/] {sig.issuer_name}")
+            self.console.print()
+
+        # UPX Unpacked Section
+        if result.is_upx_packed:
+            if result.upx_unpacked and result.unpacked_result:
+                unp = result.unpacked_result
+                self.console.print(f"[bold green]✔ UPX Unpacked in Memory:[/] Payload Score: {unp.get('ensemble_score', 0.0)}/100 ({unp.get('ensemble_risk_level', 'CLEAN')})")
+            else:
+                self.console.print("[bold yellow]⚠ UPX Packed File:[/] Payload could not be decompressed.")
+            self.console.print()
+
+        # Archive Members Section
+        if result.archive_members:
+            arch_table = Table(title=" Archive Members (In-Memory Analysis)", show_header=True, header_style="bold blue")
+            arch_table.add_column("Member", style="cyan")
+            arch_table.add_column("Size", style="dim")
+            arch_table.add_column("Encrypted", style="yellow")
+            arch_table.add_column("Threat Score", style="bold")
+            for m in result.archive_members:
+                score_str = f"{m.result.get('ensemble_score', 0.0)}/100" if m.result else (m.error or "Error")
+                enc_str = f"Yes ({m.password_used or 'pass'})" if m.is_encrypted else "No"
+                arch_table.add_row(m.filename, f"{m.size:,} B", enc_str, score_str)
+            self.console.print(arch_table)
+            self.console.print()
+
         # Errors list
         if result.errors:
             self.console.print("[bold red] Processing Errors[/]")

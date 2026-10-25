@@ -57,36 +57,47 @@ class MalConv(nn.Module):
         return torch.sigmoid(x)
 
 
+import threading
+
+_MALCONV_CACHE: dict[Path, MalConv] = {}
+_MALCONV_LOCK = threading.Lock()
+
+
 class NNThreatScorer:
     """Raw-byte Deep Learning threat scorer.
 
-    Loads a pre-trained MalConv model and uses it to score files directly from bytes.
+    Loads a pre-trained MalConv model once and uses it thread-safely across files.
     """
 
     def __init__(self, model_path: str | Path | None = None) -> None:
         self.torch = torch
-        self.model_path = Path(model_path) if model_path else DEFAULT_MODEL_PATH
+        self.model_path = Path(model_path).resolve() if model_path else DEFAULT_MODEL_PATH.resolve()
         self.model = self._load_model()
 
     def _load_model(self):
-        """Load the MalConv model with pre-trained weights."""
-        model = MalConv()
+        """Load the MalConv model with pre-trained weights (cached singleton)."""
+        with _MALCONV_LOCK:
+            if self.model_path in _MALCONV_CACHE:
+                return _MALCONV_CACHE[self.model_path]
 
-        if not self.model_path.exists():
-            raise FileNotFoundError(
-                f"Model weights not found at {self.model_path}. "
-                f"Run 'python -m fileanalysis.scoring.train' to generate them."
+            model = MalConv()
+
+            if not self.model_path.exists():
+                raise FileNotFoundError(
+                    f"Model weights not found at {self.model_path}. "
+                    f"Run 'python -m fileanalysis.scoring.train' to generate them."
+                )
+
+            state_dict = self.torch.load(
+                self.model_path,
+                map_location=self.torch.device("cpu"),
+                weights_only=True,
             )
-
-        state_dict = self.torch.load(
-            self.model_path,
-            map_location=self.torch.device("cpu"),
-            weights_only=True,
-        )
-        model.load_state_dict(state_dict)
-        model.eval()
-        logger.info("Loaded MalConv model from %s", self.model_path)
-        return model
+            model.load_state_dict(state_dict)
+            model.eval()
+            logger.info("Loaded MalConv model from %s", self.model_path)
+            _MALCONV_CACHE[self.model_path] = model
+            return model
 
     def _get_file_bytes(self, path: str) -> np.ndarray:
         """Read up to MAX_LEN bytes, padded with 256."""
@@ -103,13 +114,17 @@ class NNThreatScorer:
             
         return tensor
 
-    def calculate_score(self, result: AnalysisResult) -> None:
+    def calculate_score(self, result: AnalysisResult, file_bytes: bytes | None = None) -> None:
         """Run NN inference on the raw file bytes and set nn_score/nn_risk_level."""
-        # Read raw bytes directly from file path
-        if not result.metadata.path:
+        if file_bytes is not None:
+            raw_bytes = np.full((MAX_LEN,), 256, dtype=np.int16)
+            b = file_bytes[:MAX_LEN]
+            if len(b) > 0:
+                raw_bytes[:len(b)] = np.frombuffer(b, dtype=np.uint8)
+        elif result.metadata.path and Path(result.metadata.path).exists():
+            raw_bytes = self._get_file_bytes(result.metadata.path)
+        else:
             return
-            
-        raw_bytes = self._get_file_bytes(result.metadata.path)
         tensor = self.torch.tensor(raw_bytes, dtype=self.torch.long).unsqueeze(0)
 
         # Inference (no gradient tracking needed)

@@ -1,0 +1,151 @@
+{
+  "metadata": {
+    "name": "hello_linux.elf",
+    "path": "/Users/matanmishali/AntiGravity/FileAnalysis/tests/fixtures/hello_linux.elf",
+    "size": 512,
+    "size_human": "512.0 B",
+    "mime_type": "",
+    "file_type": "elf",
+    "magic_description": "ELF executable ()",
+    "creation_time": "2026-10-25 14:23:17 UTC",
+    "modification_time": "2026-10-25 14:23:17 UTC",
+    "permissions": "rw-r--r--"
+  },
+  "hashes": {
+    "md5": "a0a7bb1b3318b211d7d7810ea510bf91",
+    "sha1": "21aadc0342506ac76044871bd6b1b5d91460284c",
+    "sha256": "6cc259556c3f2250d1d145057c88b430541cb6b2d3267b8ac36f30ef1c9d70c7",
+    "ssdeep": "3:Bnks//xlElllllltlXllslyUlsllglllt3llvllklslNllJ2gtaLDXEt3lrl1Xlg:BnX//I/yy8MgtaEGc9DQ68",
+    "imphash": "N/A"
+  },
+  "entropy": {
+    "overall": 1.047,
+    "sections": {
+      "": 0.0,
+      ".text": 2.6416,
+      ".shstrtab": 3.1019
+    },
+    "is_packed": false,
+    "block_size": 256,
+    "profile": [
+      1.4801,
+      0.4512
+    ]
+  },
+  "strings": {
+    "urls": [],
+    "ips": [],
+    "file_paths": [],
+    "registry_keys": [],
+    "api_calls": [],
+    "email_addresses": [],
+    "crypto_wallets": [],
+    "base64_blobs": [],
+    "shell_commands": [],
+    "suspicious": [],
+    "cve_references": []
+  },
+  "extracted_strings": [],
+  "iocs": [
+    {
+      "type": "hash",
+      "value": "a0a7bb1b3318b211d7d7810ea510bf91",
+      "offset": 0,
+      "length": 512
+    },
+    {
+      "type": "hash",
+      "value": "21aadc0342506ac76044871bd6b1b5d91460284c",
+      "offset": 0,
+      "length": 512
+    },
+    {
+      "type": "hash",
+      "value": "6cc259556c3f2250d1d145057c88b430541cb6b2d3267b8ac36f30ef1c9d70c7",
+      "offset": 0,
+      "length": 512
+    }
+  ],
+  "sections": [
+    {
+      "name": "",
+      "virtual_size": 0,
+      "raw_size": 0,
+      "entropy": 0.0,
+      "permissions": "",
+      "suspicious": false,
+      "reason": ""
+    },
+    {
+      "name": ".text",
+      "virtual_size": 9,
+      "raw_size": 9,
+      "entropy": 2.6416,
+      "permissions": "XR",
+      "suspicious": false,
+      "reason": ""
+    },
+    {
+      "name": ".shstrtab",
+      "virtual_size": 17,
+      "raw_size": 17,
+      "entropy": 3.1019,
+      "permissions": "",
+      "suspicious": false,
+      "reason": ""
+    }
+  ],
+  "indicators": [
+    {
+      "category": "Defense Evasion",
+      "name": "Missing Security Mitigations",
+      "description": "The ELF binary lacks basic compile-time hardening features, common in malware stubs.",
+      "evidence": [
+        "NX (No-Execute) is disabled (stack/heap executable)",
+        "Stack Canary is missing (vulnerable to buffer overflows)"
+      ],
+      "severity": 0.3,
+      "offset": 0,
+      "length": 64
+    }
+  ],
+  "capabilities": [],
+  "yara_matches": [],
+  "signature_info": null,
+  "archive_members": [],
+  "unpacked_result": null,
+  "is_upx_packed": false,
+  "upx_unpacked": false,
+  "risk_score": 0.0,
+  "risk_level": "clean",
+  "format_info": {
+    "architecture": "ARCH.X86_64",
+    "entry_point": "0x00400080",
+    "identity_class": "CLASS.ELF64",
+    "identity_data": "ELF_DATA.LSB",
+    "object_type": "FILE_TYPE.EXEC",
+    "imports": [],
+    "import_count": 0,
+    "dependencies": [],
+    "security_mitigations": {
+      "stack_canary": false,
+      "nx": false,
+      "pie": false
+    }
+  },
+  "scoring_method": "triple",
+  "nn_score": 8.1,
+  "nn_risk_level": "clean",
+  "nn_confidence": 0.0811,
+  "ml_score": 40.0,
+  "ml_risk_level": "low",
+  "ml_confidence": 0.4,
+  "ensemble_score": 17.6,
+  "ensemble_risk_level": "clean",
+  "environment_impact": [
+    "The file has minor suspicious features but no explicit dangerous behavior detected."
+  ],
+  "errors": [],
+  "ai_summary": "The model classified this file as benign primarily due to:\n\u2022 File Size (Value: approx 512 bytes)\n\u2022 Maximum Section Entropy (Value: 3.10)\n\u2022 Average Indicator Severity (Value: 0.30)\n\nFinal ML Score: 40.0/100 (40.0% confidence)",
+  "mode": "full"
+}

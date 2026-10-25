@@ -1,0 +1,301 @@
+{
+  "metadata": {
+    "name": "hello_windows.exe",
+    "path": "/Users/matanmishali/AntiGravity/FileAnalysis/tests/fixtures/hello_windows.exe",
+    "size": 2560,
+    "size_human": "2.5 KB",
+    "mime_type": "",
+    "file_type": "pe",
+    "magic_description": "Windows Executable file (application/octet-stream)",
+    "creation_time": "2026-10-25 14:23:25 UTC",
+    "modification_time": "2026-10-25 14:23:25 UTC",
+    "permissions": "rw-r--r--"
+  },
+  "hashes": {
+    "md5": "099056786a371495dd43ef6fb429c8ae",
+    "sha1": "8e31943214787d80d8d4ac332fb4ed2cb8af23d1",
+    "sha256": "74ae7f17b0e3b01ab97ad6a18f09b2c42d7c182ed8f97a14827a0ffc17625678",
+    "ssdeep": "48:Zs/CL+UQiXVQpMpk6ai1MBH6Ce5k1Pqky:ZOUQiXO6ai4e",
+    "imphash": "N/A"
+  },
+  "entropy": {
+    "overall": 5.8259,
+    "sections": {
+      ".text": 0.1067
+    },
+    "is_packed": false,
+    "block_size": 256,
+    "profile": [
+      1.1021,
+      0.378,
+      0.1897,
+      0.0,
+      5.8867,
+      6.5325,
+      6.9795,
+      7.1051,
+      6.1243,
+      7.133
+    ]
+  },
+  "strings": {
+    "urls": [],
+    "ips": [],
+    "file_paths": [],
+    "registry_keys": [],
+    "api_calls": [],
+    "email_addresses": [],
+    "crypto_wallets": [],
+    "base64_blobs": [],
+    "shell_commands": [],
+    "suspicious": [],
+    "cve_references": []
+  },
+  "extracted_strings": [],
+  "iocs": [
+    {
+      "type": "hash",
+      "value": "099056786a371495dd43ef6fb429c8ae",
+      "offset": 0,
+      "length": 2560
+    },
+    {
+      "type": "hash",
+      "value": "8e31943214787d80d8d4ac332fb4ed2cb8af23d1",
+      "offset": 0,
+      "length": 2560
+    },
+    {
+      "type": "hash",
+      "value": "74ae7f17b0e3b01ab97ad6a18f09b2c42d7c182ed8f97a14827a0ffc17625678",
+      "offset": 0,
+      "length": 2560
+    }
+  ],
+  "sections": [
+    {
+      "name": ".text",
+      "virtual_size": 512,
+      "raw_size": 512,
+      "entropy": 0.1067,
+      "permissions": "XR",
+      "suspicious": false,
+      "reason": ""
+    }
+  ],
+  "indicators": [
+    {
+      "category": "Defense Evasion",
+      "name": "No Import Table",
+      "description": "PE file has no import table. This is unusual for legitimate executables and may indicate that imports are resolved dynamically to evade detection.",
+      "evidence": [
+        "Empty or missing import directory"
+      ],
+      "severity": 0.5,
+      "offset": 0,
+      "length": 512
+    },
+    {
+      "category": "Defense Evasion",
+      "name": "Minimal Sections",
+      "description": "PE file has only 1 section(s). Legitimate executables typically have 3+ sections.",
+      "evidence": [
+        "Section count: 1"
+      ],
+      "severity": 0.3,
+      "offset": 0,
+      "length": 512
+    }
+  ],
+  "capabilities": [],
+  "yara_matches": [
+    {
+      "rule_name": "Shellcode_NOP_Sled",
+      "description": "Detects long NOP sled (32+ bytes of 0x90) indicating shellcode runway",
+      "tags": [],
+      "severity": "medium",
+      "matched_strings": [
+        "$nop32 at 0x206: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x207: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x208: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x209: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20A: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20B: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20C: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20D: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20E: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+        "$nop32 at 0x20F: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+      ],
+      "offset": 518,
+      "length": 32,
+      "string_matches": [
+        {
+          "identifier": "$nop32",
+          "offset": 518,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 519,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 520,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 521,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 522,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 523,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 524,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 525,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 526,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 527,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 528,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 529,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 530,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 531,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 532,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 533,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 534,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 535,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 536,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        },
+        {
+          "identifier": "$nop32",
+          "offset": 537,
+          "length": 32,
+          "data": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+        }
+      ]
+    }
+  ],
+  "signature_info": {
+    "has_signature": true,
+    "is_signed": true,
+    "is_intact": true,
+    "signer_name": "CN=MalOwn Safe Test Signer, O=MalOwn Project",
+    "issuer_name": "CN=MalOwn Safe Test Signer, O=MalOwn Project",
+    "algorithm": "SHA_256",
+    "serial_number": "400bab8e6b1cfa5892043887538ddf676a8be6fa",
+    "error": null
+  },
+  "archive_members": [],
+  "unpacked_result": null,
+  "is_upx_packed": false,
+  "upx_unpacked": false,
+  "risk_score": 10.0,
+  "risk_level": "clean",
+  "format_info": {
+    "machine": "i386",
+    "compile_time": "2024-03-24 10:27:12 UTC",
+    "subsystem": "Windows GUI",
+    "is_dll": false,
+    "entry_point": "0x00001000",
+    "image_size": 12288,
+    "signature": {
+      "has_signature": true,
+      "is_signed": true,
+      "is_intact": true,
+      "signer_name": "CN=MalOwn Safe Test Signer, O=MalOwn Project",
+      "issuer_name": "CN=MalOwn Safe Test Signer, O=MalOwn Project"
+    }
+  },
+  "scoring_method": "triple",
+  "nn_score": 100.0,
+  "nn_risk_level": "critical",
+  "nn_confidence": 1.0,
+  "ml_score": 94.1,
+  "ml_risk_level": "critical",
+  "ml_confidence": 0.9407,
+  "ensemble_score": 61.6,
+  "ensemble_risk_level": "high",
+  "environment_impact": [
+    "The file has minor suspicious features but no explicit dangerous behavior detected."
+  ],
+  "errors": [],
+  "ai_summary": "The model classified this file as malicious primarily due to:\n\u2022 Embedded Shell Commands (Value: 0)\n\u2022 Total Number of Sections (Value: 1)\n\u2022 Heuristic Indicator Count (Value: 2)\n\nFinal ML Score: 94.1/100 (94.1% confidence)",
+  "mode": "full"
+}

@@ -139,14 +139,18 @@ You can bypass the interactive menu for scripting by providing the file path dir
 
 | Flag | Description |
 |------|-------------|
+| `--quick`, `-q` | Fast analysis mode (skips heavy ML/SHAP, keeps format headers, hashes, entropy, strings, YARA, capabilities) |
 | `--json` | Output results as JSON |
 | `--research` | Open interactive hex viewer directly |
-| `--yara-rules DIR` | Path to custom YARA rules directory |
+| `--yara-rules DIR` | Path to custom YARA rules directory (merged with built-in rules) |
 
 **Examples:**
 ```bash
 # Standard scan in one shot
 python -m fileanalysis.cli suspicious.exe
+
+# Quick scan (fast triage)
+python -m fileanalysis.cli suspicious.exe --quick
 
 # JSON output (for scripting)
 python -m fileanalysis.cli suspicious.exe --json
@@ -154,13 +158,44 @@ python -m fileanalysis.cli suspicious.exe --json
 # Interactive binary research mode directly
 python -m fileanalysis.cli suspicious.exe --research
 
-# Custom YARA rules
+# Custom YARA rules (merged with built-in rulesets)
 python -m fileanalysis.cli suspicious.exe --yara-rules /path/to/rules/
+```
+
+### 4. Python Library Usage
+
+MalOwn provides a stable, thread-safe function that can be imported directly into Python services. Models and rule sets are loaded once and reused across invocations:
+
+```python
+from fileanalysis import analyze
+
+# Standard analysis (full ML ensemble + SHAP insights)
+result = analyze("sample.exe", mode="full")
+print(f"Score: {result.ensemble_score}/100, Risk: {result.risk_level.value}")
+
+# Quick analysis (fast triage: hashes, format headers, strings, YARA, capabilities)
+quick_result = analyze("sample.exe", mode="quick")
+
+# Analyze raw bytes directly in memory
+with open("payload.bin", "rb") as f:
+    data = f.read()
+result = analyze("payload.bin", file_bytes=data, mode="quick")
+
+# Access typed IOCs and byte offsets
+for ioc in result.iocs:
+    print(f"[{ioc.type}] {ioc.value} (offset: 0x{ioc.offset:X}, len: {ioc.length})")
+
+# Access block-by-block entropy profile
+print(f"Block size: {result.entropy.block_size} bytes, Blocks: {len(result.entropy.profile)}")
+
+# Inspect archive members (if ZIP archive)
+for member in result.archive_members:
+    print(f"Archive entry: {member.filename}, Score: {member.result.ensemble_score}")
 ```
 
 ---
 
-## 4. Model Context Protocol (MCP) Server
+## 5. Model Context Protocol (MCP) Server
 
 MalOwn includes a production-grade MCP server that allows AI assistants (like Claude Desktop or Cursor) to execute analysis pipelines and binary research tools directly.
 
@@ -169,8 +204,8 @@ The server supports two transports:
 - **`sse`** (Server-Sent Events): For remote clients via HTTP.
 
 **Available MCP Tools:**
-- `analyze_file`: Runs the full scanning pipeline.
-- `get_binary_annotations`: Extracts suspicious byte patterns and headers.
+- `analyze_file`: Runs analysis pipeline (`mode: "full" | "quick"`, supports custom YARA rules).
+- `get_binary_annotations`: Extracts suspicious byte patterns and headers with optional `offset` and `length` pagination.
 - `extract_control_flow_graph`: Computes CFG basic blocks.
 - `get_hex_dump`: Generates raw hex dumps.
 
@@ -187,13 +222,19 @@ uv run fileanalysis-mcp --transport sse --port 8000
 
 ## How It Works
 
-MalOwn runs a multi-stage pipeline on every file:
+MalOwn runs a multi-stage static pipeline on every file:
 
-1. **Load** — Reads the file, detects type (PE, ELF, Mach-O, script, document)
-2. **Analyze** — Runs format-specific analyzers (hashing, entropy, advanced strings including CVE/Registry patterns, imports, sections)
-3. **Intelligence** — YARA signature matching + MITRE ATT&CK capability mapping (e.g., Exploitation, Persistence)
-4. **Score** — Triple scoring with heuristic rules, a neural network, and a LightGBM decision tree model
-5. **Report** — Rich terminal output or JSON
+1. **Load** — Reads the file/buffer, detects type (PE, ELF, Mach-O, script, document, ZIP archive).
+2. **Analyze** — Runs format-specific analyzers:
+   - Cryptographic & fuzzy hashing (MD5, SHA-1, SHA-256, ssdeep, imphash) emitting typed hash IOCs.
+   - Block-by-block Shannon entropy profile (256-byte or 1024-byte blocks) for visualization.
+   - Regex and string extraction with exact byte offsets and lengths for all findings.
+   - Air-gapped Windows PE Authenticode signature verification (signer name and static integrity check).
+   - In-memory UPX unpacking and dual analysis (original + unpacked payload).
+   - In-memory password-protected ZIP archive member scanning with zip-bomb safeguards.
+3. **Intelligence** — Built-in + merged custom YARA signature matching and MITRE ATT&CK capability mapping with source byte offsets.
+4. **Score** — Triple scoring with heuristic rules, a neural network (MalConv), and a LightGBM decision tree model.
+5. **Report** — Rich terminal output or JSON with exact byte offsets, lengths, and typed IOCs.
 
 ### Dual Scoring System
 
@@ -201,10 +242,10 @@ Every scan produces **independent threat scores** and an ensemble score:
 
 | Scorer | How it works |
 |--------|-------------|
-| ** Heuristic** | Hand-tuned weighted formula (entropy + strings + capabilities + YARA) |
-| ** Neural Net** | 4-layer MLP trained on real malware/benign samples |
-| ** LightGBM** | Gradient boosting decision tree trained on the same feature set |
-| ** AI Insights** | Google Gemini LLM generates an executive summary, and local Qwen2.5-Coder analyzes suspicious assembly patterns |
+| **Heuristic** | Hand-tuned weighted formula (entropy + strings + capabilities + YARA) |
+| **Neural Net** | 4-layer MLP trained on real malware/benign samples |
+| **LightGBM** | Gradient boosting decision tree trained on the same feature set |
+| **AI Insights** | Local tree model feature contribution (SHAP) explanations, and local Qwen2.5-Coder analyzes suspicious assembly patterns |
 
 ### Risk Levels
 
@@ -257,41 +298,44 @@ git commit -m "your message --tree --train"
 
 ## Project Structure
 
+```
 FileAnalysis/
  fileanalysis/
     cli.py                    # Main CLI entry point (interactive + one-shot)
     loader.py                 # File loading & type detection
-    pipeline.py               # Shared analysis pipeline (used by CLI & MCP)
+    pipeline.py               # Shared analysis pipeline & analyze() library function
     mcp_server.py             # MCP server (stdio + SSE transports)
     analyzers/                # Format-specific analyzers
-       base.py               # AnalysisResult data structure
-       entropy.py            # Entropy analysis
-       hashing.py            # Cryptographic hashing
-       strings.py            # String extraction & categorization
-       pe_analyzer.py        # Windows PE analysis
+       base.py               # AnalysisResult, IOC, SignatureInfo, ArchiveMemberResult data structures
+       entropy.py            # Entropy analysis & block profile
+       hashing.py            # Cryptographic hashing & typed IOCs
+       strings.py            # String extraction & typed IOCs with byte offsets
+       pe_analyzer.py        # Windows PE analysis & Authenticode signature check
        elf_analyzer.py       # Linux ELF analysis
        macho_analyzer.py     # macOS Mach-O analysis
        script_analyzer.py    # Script file analysis
        document_analyzer.py  # Document file analysis
        dll_analyzer.py       # DLL-specific analysis
+       upx.py                # In-memory UPX unpacking
+       archive.py            # In-memory ZIP analysis with zip bomb defense
     intelligence/
-       yara_scanner.py       # YARA rule matching
-       capability_mapper.py  # MITRE ATT&CK mapping
-       ai_insights.py        # Google Gemini executive summary
+       yara_scanner.py       # Built-in + merged custom YARA rule matching
+       capability_mapper.py  # MITRE ATT&CK mapping with byte offsets
+       ai_insights.py        # SHAP feature contribution insights
        asm_insights.py       # Local Qwen2.5-Coder assembly explanation
     research/
        hex_viewer.py         # Interactive hex + disassembly viewer
     scoring/
        scorer.py             # Heuristic threat scorer
-       nn_model.py           # MalConv neural network
-       ml_model.py           # LightGBM tree model
+       nn_model.py           # MalConv neural network (cached singleton)
+       ml_model.py           # LightGBM tree model (cached singleton)
        features.py           # 30-dim feature extraction
        sandbox_train.py      # Real malware training (Docker)
        threat_model_malconv.pt      # Trained NN weights
        threat_model_lgb.txt         # Trained LightGBM weights
     reporting/
         terminal_report.py    # Rich terminal output
-        json_report.py        # JSON output
+        json_report.py        # JSON output with offsets and typed IOCs
  Dockerfile.sandbox            # Docker sandbox for safe training
  requirements.txt              # Python dependencies
  pyproject.toml                # Project configuration
@@ -308,7 +352,7 @@ FileAnalysis/
 | `pefile` | PE binary parsing |
 | `yara-python` | YARA rule matching |
 | `puremagic` | MIME type detection |
-| `lief` | Cross-platform binary parsing |
+| `lief` | Cross-platform binary parsing & Authenticode validation |
 | `ppdeep` | Fuzzy hashing (ssdeep) |
 | `numpy` | Feature vector computation |
 | `torch` *(optional)* | Neural network inference |
@@ -322,9 +366,11 @@ FileAnalysis/
 
 ---
 
-## License
+## License & Credits
 
-See [LICENSE](LICENSE) for details.
+MalOwn is licensed under the [Apache License 2.0](LICENSE).
+
+**Credit:** MalOwn by Matan Mishali (matantan55).
 
 ## Cloud Integration & CI/CD
 

@@ -41,6 +41,8 @@ class Indicator:
     description: str
     evidence: list[str] = field(default_factory=list)
     severity: float = 0.0  # 0.0 - 1.0
+    offset: int = 0
+    length: int = 0
 
 
 @dataclass
@@ -59,6 +61,8 @@ class EntropyResult:
     overall: float = 0.0
     sections: dict[str, float] = field(default_factory=dict)
     is_packed: bool = False
+    block_size: int = 256
+    profile: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -75,6 +79,24 @@ class StringCategory:
     shell_commands: list[str] = field(default_factory=list)
     suspicious: list[str] = field(default_factory=list)
     cve_references: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ExtractedStringHit:
+    """An extracted string with source location in the binary."""
+    value: str
+    offset: int = 0
+    length: int = 0
+    category: str = "general"
+
+
+@dataclass
+class IOC:
+    """A typed Indicator of Compromise with value and byte offset."""
+    type: str  # ipv4, ipv6, domain, url, email, file_path, registry_key, hash
+    value: str
+    offset: int = 0
+    length: int = 0
 
 
 @dataclass
@@ -97,6 +119,9 @@ class YaraMatch:
     tags: list[str] = field(default_factory=list)
     severity: str = "medium"
     matched_strings: list[str] = field(default_factory=list)
+    offset: int = 0
+    length: int = 0
+    string_matches: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -108,6 +133,33 @@ class Capability:
     technique_id: str = ""  # MITRE ATT&CK technique ID
     evidence: list[str] = field(default_factory=list)
     risk_contribution: float = 0.0
+    offset: int = 0
+    length: int = 0
+
+
+@dataclass
+class SignatureInfo:
+    """Authenticode digital signature information for Windows PE files."""
+    has_signature: bool = False
+    is_signed: bool = False
+    is_intact: bool = False
+    signer_name: Optional[str] = None
+    issuer_name: Optional[str] = None
+    algorithm: Optional[str] = None
+    serial_number: Optional[str] = None
+    error: Optional[str] = None
+
+
+@dataclass
+class ArchiveMemberResult:
+    """Analysis result for a single member inside an archive."""
+    filename: str
+    size: int = 0
+    compressed_size: int = 0
+    is_encrypted: bool = False
+    password_used: Optional[str] = None
+    result: Optional[dict[str, Any]] = None
+    error: Optional[str] = None
 
 
 @dataclass
@@ -132,10 +184,17 @@ class AnalysisResult:
     hashes: HashResult = field(default_factory=HashResult)
     entropy: EntropyResult = field(default_factory=EntropyResult)
     strings: StringCategory = field(default_factory=StringCategory)
+    extracted_strings: list[ExtractedStringHit] = field(default_factory=list)
+    iocs: list[IOC] = field(default_factory=list)
     sections: list[SectionInfo] = field(default_factory=list)
     indicators: list[Indicator] = field(default_factory=list)
     capabilities: list[Capability] = field(default_factory=list)
     yara_matches: list[YaraMatch] = field(default_factory=list)
+    signature_info: Optional[SignatureInfo] = None
+    archive_members: list[ArchiveMemberResult] = field(default_factory=list)
+    unpacked_result: Optional[dict[str, Any]] = None
+    is_upx_packed: bool = False
+    upx_unpacked: bool = False
     risk_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.CLEAN
     format_info: dict[str, Any] = field(default_factory=dict)
@@ -151,6 +210,7 @@ class AnalysisResult:
     environment_impact: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     ai_summary: Optional[str] = None
+    mode: str = "full"
 
 
 class BaseAnalyzer(abc.ABC):

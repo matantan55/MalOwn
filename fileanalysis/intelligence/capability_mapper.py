@@ -111,6 +111,26 @@ class CapabilityMapper:
                     evidence.append(f"Indicators: {', '.join(matched_indicators)}")
                     risk_contrib += 0.3
 
+                cap_offset = 0
+                cap_length = 0
+
+                # Trace source bytes for proof from indicators or extracted API strings
+                found_loc = False
+                for ind in result.indicators:
+                    if any(mi in ind.name for mi in matched_indicators):
+                        if ind.length > 0 or ind.offset > 0:
+                            cap_offset = ind.offset
+                            cap_length = ind.length
+                            found_loc = True
+                            break
+
+                if not found_loc:
+                    for s in result.extracted_strings:
+                        if s.value in matched_apis:
+                            cap_offset = s.offset
+                            cap_length = s.length
+                            break
+
                 mapped_caps.append(Capability(
                     category=rule["category"],
                     name=rule["name"],
@@ -118,6 +138,8 @@ class CapabilityMapper:
                     technique_id=rule["technique_id"],
                     evidence=evidence,
                     risk_contribution=min(risk_contrib, 1.0),
+                    offset=cap_offset,
+                    length=cap_length,
                 ))
 
         result.capabilities = mapped_caps

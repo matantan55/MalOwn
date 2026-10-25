@@ -59,10 +59,16 @@ class ScriptAnalyzer(BaseAnalyzer):
         # Run regex checks against the script content
         for category_name, patterns in DANGEROUS_PATTERNS.items():
             category_indicators = []
+            first_offset = 0
+            first_length = 0
             for pattern, description in patterns:
-                matches = pattern.findall(content)
-                if matches:
+                m = pattern.search(content)
+                if m:
+                    matches = pattern.findall(content)
                     category_indicators.append((description, len(matches), matches[:3]))
+                    if first_length == 0:
+                        first_offset = m.start()
+                        first_length = len(m.group())
 
             if category_indicators:
                 threat_cat = self._get_threat_category(category_name)
@@ -76,6 +82,8 @@ class ScriptAnalyzer(BaseAnalyzer):
                     description=f"Detected script patterns associated with {category_name}.",
                     evidence=evidence,
                     severity=self._get_category_severity(category_name),
+                    offset=first_offset,
+                    length=first_length,
                 ))
 
     def _get_threat_category(self, category_name: str) -> ThreatCategory:

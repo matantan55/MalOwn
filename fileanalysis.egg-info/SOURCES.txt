@@ -13,6 +13,7 @@ fileanalysis.egg-info/entry_points.txt
 fileanalysis.egg-info/requires.txt
 fileanalysis.egg-info/top_level.txt
 fileanalysis/analyzers/__init__.py
+fileanalysis/analyzers/archive.py
 fileanalysis/analyzers/base.py
 fileanalysis/analyzers/dll_analyzer.py
 fileanalysis/analyzers/document_analyzer.py
@@ -23,6 +24,7 @@ fileanalysis/analyzers/macho_analyzer.py
 fileanalysis/analyzers/pe_analyzer.py
 fileanalysis/analyzers/script_analyzer.py
 fileanalysis/analyzers/strings.py
+fileanalysis/analyzers/upx.py
 fileanalysis/intelligence/__init__.py
 fileanalysis/intelligence/ai_insights.py
 fileanalysis/intelligence/asm_insights.py
@@ -39,3 +41,4 @@ fileanalysis/scoring/ml_model.py
 fileanalysis/scoring/nn_model.py
 fileanalysis/scoring/sandbox_train.py
 fileanalysis/scoring/scorer.py
+tests/test_project0_features.py

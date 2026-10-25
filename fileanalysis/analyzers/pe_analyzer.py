@@ -9,6 +9,7 @@ from fileanalysis.analyzers.base import (
     Indicator,
     SectionInfo,
     ThreatCategory,
+    SignatureInfo,
 )
 from fileanalysis.analyzers.entropy import EntropyAnalyzer
 
@@ -129,12 +130,13 @@ class PEAnalyzer(BaseAnalyzer):
         try:
             self._parse_headers(pe, result)
             self._analyze_sections(pe, file_bytes, result)
-            self._analyze_imports(pe, result)
+            self._analyze_imports(pe, file_bytes, result)
             self._analyze_exports(pe, result)
             self._detect_packers(pe, file_bytes, result)
             self._check_tls_callbacks(pe, result)
             self._check_anomalies(pe, result)
             self._check_resources(pe, result)
+            self._check_authenticode(file_bytes, result)
         finally:
             pe.close()
 
@@ -157,6 +159,7 @@ class PEAnalyzer(BaseAnalyzer):
                 # Flag suspicious timestamps
                 now = datetime.now(tz=timezone.utc)
                 if compile_time.year < 2000 or compile_time > now:
+                    ts_offset = getattr(pe.FILE_HEADER, "get_file_offset", lambda: 0)() + 4
                     result.indicators.append(Indicator(
                         category=ThreatCategory.DEFENSE_EVASION,
                         name="Suspicious Compilation Timestamp",
@@ -166,6 +169,8 @@ class PEAnalyzer(BaseAnalyzer):
                         ),
                         evidence=[f"Timestamp: {info['compile_time']}"],
                         severity=0.5,
+                        offset=ts_offset,
+                        length=4,
                     ))
             else:
                 info["compile_time"] = "N/A (zeroed)"
@@ -258,9 +263,11 @@ class PEAnalyzer(BaseAnalyzer):
                         f"Virtual size: {section.Misc_VirtualSize}",
                     ],
                     severity=0.6,
+                    offset=section.PointerToRawData,
+                    length=section.SizeOfRawData,
                 ))
 
-    def _analyze_imports(self, pe, result: AnalysisResult) -> None:
+    def _analyze_imports(self, pe, file_bytes: bytes, result: AnalysisResult) -> None:
         """Analyze import table for suspicious API calls."""
         if not hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
             return
@@ -299,12 +306,18 @@ class PEAnalyzer(BaseAnalyzer):
                 categories.setdefault(cat, []).append((func, desc, dll))
 
             for cat, funcs in categories.items():
+                first_func = funcs[0][0]
+                idx = file_bytes.find(first_func.encode())
+                func_off = idx if idx != -1 else 0
+                func_len = len(first_func) if idx != -1 else 0
                 result.indicators.append(Indicator(
                     category=cat,
                     name=f"Suspicious Imports ({cat.value})",
                     description=f"Found {len(funcs)} suspicious import(s) related to {cat.value}.",
                     evidence=[f"{dll}:{func} — {desc}" for func, desc, dll in funcs[:10]],
                     severity=min(0.3 + len(funcs) * 0.1, 0.9),
+                    offset=func_off,
+                    length=func_len,
                 ))
 
     def _analyze_exports(self, pe, result: AnalysisResult) -> None:
@@ -357,8 +370,9 @@ class PEAnalyzer(BaseAnalyzer):
                 detected_packers.append(packer_name)
 
         # Check entry point bytes
+        ep_offset = 0
         try:
-            ep_offset = pe.get_offset_from_rva(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
+            ep_offset = pe.get_offset_from_rva(pe.OPTIONAL_HEADER.AddressOfEntryPoint) or 0
             if ep_offset and ep_offset < len(file_bytes) - 4:
                 ep_bytes = file_bytes[ep_offset:ep_offset + 4]
                 for sig, packer in PACKER_SIGNATURES.items():
@@ -379,6 +393,8 @@ class PEAnalyzer(BaseAnalyzer):
                 ),
                 evidence=unique_packers,
                 severity=0.6,
+                offset=ep_offset,
+                length=4,
             ))
 
     def _check_tls_callbacks(self, pe, result: AnalysisResult) -> None:
@@ -387,6 +403,12 @@ class PEAnalyzer(BaseAnalyzer):
             try:
                 callbacks = pe.DIRECTORY_ENTRY_TLS.struct
                 if callbacks:
+                    tls_offset = 0
+                    try:
+                        tls_rva = pe.OPTIONAL_HEADER.DATA_DIRECTORY[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_TLS']].VirtualAddress
+                        tls_offset = pe.get_offset_from_rva(tls_rva) or 0
+                    except Exception:
+                        pass
                     result.indicators.append(Indicator(
                         category=ThreatCategory.DEFENSE_EVASION,
                         name="TLS Callbacks Present",
@@ -396,6 +418,8 @@ class PEAnalyzer(BaseAnalyzer):
                         ),
                         evidence=["TLS directory present with callbacks"],
                         severity=0.5,
+                        offset=tls_offset,
+                        length=32,
                     ))
                     result.format_info["tls_callbacks"] = True
             except Exception:
@@ -403,6 +427,7 @@ class PEAnalyzer(BaseAnalyzer):
 
     def _check_anomalies(self, pe, result: AnalysisResult) -> None:
         """Check for structural anomalies in the PE file."""
+        hdr_size = getattr(pe.OPTIONAL_HEADER, "SizeOfHeaders", 1024)
         # Check for no imports (unusual for legitimate executables)
         if not hasattr(pe, "DIRECTORY_ENTRY_IMPORT") or not pe.DIRECTORY_ENTRY_IMPORT:
             result.indicators.append(Indicator(
@@ -414,6 +439,8 @@ class PEAnalyzer(BaseAnalyzer):
                 ),
                 evidence=["Empty or missing import directory"],
                 severity=0.5,
+                offset=0,
+                length=hdr_size,
             ))
 
         # Check for very few sections
@@ -428,6 +455,8 @@ class PEAnalyzer(BaseAnalyzer):
                 ),
                 evidence=[f"Section count: {num_sections}"],
                 severity=0.3,
+                offset=0,
+                length=hdr_size,
             ))
 
     def _check_resources(self, pe, result: AnalysisResult) -> None:
@@ -435,11 +464,12 @@ class PEAnalyzer(BaseAnalyzer):
         if not hasattr(pe, "DIRECTORY_ENTRY_RESOURCE"):
             return
 
-
         embedded_pe = False
+        res_offset = 0
+        res_size = 0
 
         def _walk_resources(entries, depth=0):
-            nonlocal embedded_pe
+            nonlocal embedded_pe, res_offset, res_size
             for entry in entries:
                 if hasattr(entry, "directory"):
                     _walk_resources(entry.directory.entries, depth + 1)
@@ -450,6 +480,11 @@ class PEAnalyzer(BaseAnalyzer):
                         data = pe.get_data(rva, min(size, 1024))
                         if data[:2] == b"MZ":
                             embedded_pe = True
+                            try:
+                                res_offset = pe.get_offset_from_rva(rva) or 0
+                            except Exception:
+                                res_offset = 0
+                            res_size = size
                     except Exception:
                         pass
 
@@ -468,4 +503,75 @@ class PEAnalyzer(BaseAnalyzer):
                 ),
                 evidence=["MZ header found in resource data"],
                 severity=0.8,
+                offset=res_offset,
+                length=min(res_size, 1024),
             ))
+
+    def _check_authenticode(self, file_bytes: bytes, result: AnalysisResult) -> None:
+        """Check whether a PE file carries an Authenticode signature, signer identity, and integrity."""
+        sig_info = SignatureInfo(has_signature=False, is_signed=False, is_intact=False)
+        try:
+            import lief
+            binary = lief.PE.parse(list(file_bytes))
+            if binary and binary.signatures:
+                sig = binary.signatures[0]
+                sig_info.has_signature = True
+                sig_info.is_signed = True
+
+                signer_name = None
+                issuer_name = None
+                serial = None
+                algo = None
+
+                if sig.signers:
+                    signer = sig.signers[0]
+                    if signer.cert:
+                        signer_name = signer.cert.subject
+                        issuer_name = signer.cert.issuer
+                        raw_serial = signer.cert.serial_number
+                        if isinstance(raw_serial, (bytes, bytearray, list)):
+                            serial = bytes(raw_serial).hex()
+                        else:
+                            serial = str(raw_serial)
+                    raw_algo = str(signer.digest_algorithm)
+                    algo = raw_algo.split(".")[-1] if "." in raw_algo else raw_algo
+
+                if not signer_name and sig.certificates:
+                    signer_name = sig.certificates[0].subject
+                    issuer_name = sig.certificates[0].issuer
+
+                sig_info.signer_name = signer_name
+                sig_info.issuer_name = issuer_name
+                sig_info.serial_number = serial
+                sig_info.algorithm = algo
+
+                # Air-gapped static integrity check
+                check_flag = sig.check(lief.PE.Signature.VERIFICATION_CHECKS.HASH_ONLY)
+                is_intact = (check_flag == lief.PE.Signature.VERIFICATION_FLAGS.OK)
+                sig_info.is_intact = is_intact
+
+                if not is_intact:
+                    result.indicators.append(Indicator(
+                        category=ThreatCategory.DEFENSE_EVASION,
+                        name="Tampered Authenticode Signature",
+                        description=(
+                            f"PE file carries an Authenticode signature for '{signer_name or 'Unknown'}', "
+                            f"but the signature hash verification failed ({check_flag}). "
+                            "The binary was likely modified or tampered with."
+                        ),
+                        evidence=[f"Signer: {signer_name}", f"Status: {check_flag}"],
+                        severity=0.85,
+                        offset=0,
+                        length=len(file_bytes),
+                    ))
+        except Exception as e:
+            sig_info.error = str(e)
+
+        result.signature_info = sig_info
+        result.format_info["signature"] = {
+            "has_signature": sig_info.has_signature,
+            "is_signed": sig_info.is_signed,
+            "is_intact": sig_info.is_intact,
+            "signer_name": sig_info.signer_name,
+            "issuer_name": sig_info.issuer_name,
+        }

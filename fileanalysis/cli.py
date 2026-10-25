@@ -32,12 +32,14 @@ from fileanalysis.research.hex_viewer import HexViewer
 
 console = Console(stderr=True)
 
-def run_analysis(file_path: str, json_format: bool, yara_rules: str | None) -> None:
-    """Run standard full scanning analysis."""
+def run_analysis(file_path: str, json_format: bool, yara_rules: str | None, quick: bool = False) -> None:
+    """Run scanning analysis (full or quick mode)."""
     show_progress = not json_format
+    mode = "quick" if quick else "full"
 
     if show_progress:
-        console.print("[bold cyan]Starting file analysis...[/]", justify="center")
+        mode_desc = "quick (static heuristics & YARA)" if quick else "full (heuristics, ML & neural net)"
+        console.print(f"[bold cyan]Starting file analysis [{mode_desc}]...[/]", justify="center")
 
     with Progress(
         SpinnerColumn("dots"),
@@ -48,7 +50,7 @@ def run_analysis(file_path: str, json_format: bool, yara_rules: str | None) -> N
         disable=not show_progress,
     ) as progress:
         t_pipeline = progress.add_task("🔬 Running analysis pipeline…", total=1)
-        result = run_pipeline(file_path, yara_rules)
+        result = run_pipeline(file_path, yara_rules=yara_rules, mode=mode)
         progress.advance(t_pipeline)
 
     # Render report
@@ -191,9 +193,10 @@ def interactive_menu():
 @click.command()
 @click.argument("file_path", required=False, type=click.Path(exists=True, dir_okay=False))
 @click.option("--json", "json_format", is_flag=True, help="Output results in JSON format.")
+@click.option("--quick", is_flag=True, help="Run in quick mode (skips MalConv, LightGBM, and SHAP; runs heuristics, hashes, entropy, strings, headers, and YARA).")
 @click.option("--research", is_flag=True, help="Open interactive hex viewer with binary annotations.")
 @click.option("--yara-rules", type=click.Path(file_okay=False), help="Custom directory containing YARA rules (.yar/.yara).")
-def cli(file_path: str | None, json_format: bool, research: bool, yara_rules: str | None) -> None:
+def cli(file_path: str | None, json_format: bool, quick: bool, research: bool, yara_rules: str | None) -> None:
     """Analyze a file for malicious indicators, capabilities, and threat environment impact."""
     if not file_path:
         # Interactive mode
@@ -204,7 +207,7 @@ def cli(file_path: str | None, json_format: bool, research: bool, yara_rules: st
             viewer = HexViewer(file_path)
             viewer.run()
         else:
-            run_analysis(file_path, json_format, yara_rules)
+            run_analysis(file_path, json_format, yara_rules, quick=quick)
 
 if __name__ == "__main__":
     cli()

@@ -1,0 +1,207 @@
+{
+  "metadata": {
+    "name": "hello_script.py",
+    "path": "/Users/matanmishali/AntiGravity/FileAnalysis/tests/fixtures/hello_script.py",
+    "size": 1178,
+    "size_human": "1.2 KB",
+    "mime_type": "",
+    "file_type": "script",
+    "magic_description": "Python Script (text/x-python)",
+    "creation_time": "2026-10-25 14:22:26 UTC",
+    "modification_time": "2026-10-25 14:22:26 UTC",
+    "permissions": "rw-r--r--"
+  },
+  "hashes": {
+    "md5": "f57573291e0588170141daf283de7727",
+    "sha1": "281e1149e654a04ac2612d624df80f5259bb9665",
+    "sha256": "e028861e9e834805ee60200b46f315c99faabd7b4b9f29ce0dd1890540bdf7da",
+    "ssdeep": "24:OARp0CSfwFUra7Hdd1LBRcr9Or+y+SPMTQLPfm5V8jV/l1QYTqXQypwv:OA+wq+7HH1lRuAhhLo/yqgyA",
+    "imphash": "N/A"
+  },
+  "entropy": {
+    "overall": 5.1309,
+    "sections": {},
+    "is_packed": false,
+    "block_size": 256,
+    "profile": [
+      4.7159,
+      5.2104,
+      4.7912,
+      4.9444,
+      4.4631
+    ]
+  },
+  "strings": {
+    "urls": [
+      "https://example.com/docs/api"
+    ],
+    "ips": [
+      "8.8.8.8"
+    ],
+    "file_paths": [
+      "/usr/bin/env",
+      "/etc/malown/config.json"
+    ],
+    "registry_keys": [],
+    "api_calls": [],
+    "email_addresses": [
+      "support@example.com"
+    ],
+    "crypto_wallets": [],
+    "base64_blobs": [],
+    "shell_commands": [],
+    "suspicious": [],
+    "cve_references": []
+  },
+  "extracted_strings": [
+    {
+      "value": "https://example.com/docs/api",
+      "offset": 329,
+      "length": 28,
+      "category": "url"
+    },
+    {
+      "value": "8.8.8.8",
+      "offset": 453,
+      "length": 7,
+      "category": "ipv4"
+    },
+    {
+      "value": "support@example.com",
+      "offset": 417,
+      "length": 19,
+      "category": "email"
+    },
+    {
+      "value": "/usr/bin/env",
+      "offset": 2,
+      "length": 12,
+      "category": "file_path"
+    },
+    {
+      "value": "/etc/malown/config.json",
+      "offset": 375,
+      "length": 23,
+      "category": "file_path"
+    }
+  ],
+  "iocs": [
+    {
+      "type": "hash",
+      "value": "f57573291e0588170141daf283de7727",
+      "offset": 0,
+      "length": 1178
+    },
+    {
+      "type": "hash",
+      "value": "281e1149e654a04ac2612d624df80f5259bb9665",
+      "offset": 0,
+      "length": 1178
+    },
+    {
+      "type": "hash",
+      "value": "e028861e9e834805ee60200b46f315c99faabd7b4b9f29ce0dd1890540bdf7da",
+      "offset": 0,
+      "length": 1178
+    },
+    {
+      "type": "url",
+      "value": "https://example.com/docs/api",
+      "offset": 329,
+      "length": 28
+    },
+    {
+      "type": "domain",
+      "value": "example.com",
+      "offset": 337,
+      "length": 11
+    },
+    {
+      "type": "ipv4",
+      "value": "8.8.8.8",
+      "offset": 453,
+      "length": 7
+    },
+    {
+      "type": "email",
+      "value": "support@example.com",
+      "offset": 417,
+      "length": 19
+    },
+    {
+      "type": "file_path",
+      "value": "/usr/bin/env",
+      "offset": 2,
+      "length": 12
+    },
+    {
+      "type": "file_path",
+      "value": "/etc/malown/config.json",
+      "offset": 375,
+      "length": 23
+    }
+  ],
+  "sections": [],
+  "indicators": [
+    {
+      "category": "Command & Control",
+      "name": "URLs Detected",
+      "description": "Found 1 URL(s) embedded in the file.",
+      "evidence": [
+        "https://example.com/docs/api"
+      ],
+      "severity": 0.4,
+      "offset": 329,
+      "length": 28
+    },
+    {
+      "category": "Command & Control",
+      "name": "IP Addresses Detected",
+      "description": "Found 1 IP address(es) embedded in the file.",
+      "evidence": [
+        "8.8.8.8"
+      ],
+      "severity": 0.5,
+      "offset": 453,
+      "length": 7
+    }
+  ],
+  "capabilities": [
+    {
+      "category": "Command & Control",
+      "name": "Command & Control",
+      "description": "Establishes outbound communication channels to receive instructions or send heartbeats.",
+      "technique_id": "T1071",
+      "evidence": [
+        "Indicators: URLs Detected, IP Addresses Detected"
+      ],
+      "risk_contribution": 0.3,
+      "offset": 329,
+      "length": 28
+    }
+  ],
+  "yara_matches": [],
+  "signature_info": null,
+  "archive_members": [],
+  "unpacked_result": null,
+  "is_upx_packed": false,
+  "upx_unpacked": false,
+  "risk_score": 16.5,
+  "risk_level": "clean",
+  "format_info": {},
+  "scoring_method": "triple",
+  "nn_score": 20.0,
+  "nn_risk_level": "clean",
+  "nn_confidence": 0.2,
+  "ml_score": 20.0,
+  "ml_risk_level": "clean",
+  "ml_confidence": 0.2,
+  "ensemble_score": 18.6,
+  "ensemble_risk_level": "clean",
+  "environment_impact": [
+    "It initiates remote connections to server infrastructures (C2), meaning it could receive orders or download extra packages."
+  ],
+  "errors": [],
+  "ai_summary": "The model classified this file as benign primarily due to:\n\u2022 Embedded File Paths (Value: 2)\n\u2022 Overall File Entropy (Value: 5.13)\n\u2022 File Size (Value: approx 1178 bytes)\n\nFinal ML Score: 20.0/100 (20.0% confidence)",
+  "mode": "full"
+}

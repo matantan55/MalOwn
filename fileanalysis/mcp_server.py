@@ -60,10 +60,11 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="analyze_file",
             description=(
-                "Run the full MalOwn scanning pipeline on a file. "
-                "Returns a JSON report containing hashes, entropy, "
-                "YARA matches, MITRE ATT&CK capabilities, and "
-                "ensemble threat scores (heuristic + neural net + LightGBM)."
+                "Run the MalOwn scanning pipeline on a file. "
+                "Supports 'full' mode (heuristic + neural net + LightGBM + SHAP) "
+                "or 'quick' mode (heuristics, hashes, entropy, strings, headers, and YARA). "
+                "Returns a JSON report with typed IOCs, byte offsets on every hit, "
+                "entropy profile, and threat scores."
             ),
             inputSchema={
                 "type": "object",
@@ -72,11 +73,17 @@ async def list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Absolute path to the file to analyze.",
                     },
+                    "mode": {
+                        "type": "string",
+                        "description": "Analysis mode: 'full' (default) or 'quick'.",
+                        "enum": ["full", "quick"],
+                        "default": "full",
+                    },
                     "yara_rules": {
                         "type": "string",
                         "description": (
                             "Optional path to a directory containing custom "
-                            "YARA rule files (.yar/.yara)."
+                            "YARA rule files (.yar/.yara) to merge with built-in rules."
                         ),
                     },
                 },
@@ -87,7 +94,7 @@ async def list_tools() -> list[types.Tool]:
             name="get_binary_annotations",
             description=(
                 "Extract suspicious byte patterns, file headers, "
-                "and API strings from a binary file."
+                "and API strings from a binary file with optional offset/length pagination."
             ),
             inputSchema={
                 "type": "object",
@@ -95,6 +102,15 @@ async def list_tools() -> list[types.Tool]:
                     "file_path": {
                         "type": "string",
                         "description": "Absolute path to the binary file.",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Optional starting byte offset for pagination (default: 0).",
+                        "default": 0,
+                    },
+                    "length": {
+                        "type": "integer",
+                        "description": "Optional page length in bytes to filter annotations.",
                     },
                 },
                 "required": ["file_path"],
@@ -189,15 +205,17 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 # ── Tool Handlers ────────────────────────────────────────────────────
 
 def _handle_analyze_file(arguments: dict) -> list[types.TextContent]:
-    """Run the full analysis pipeline on a file."""
+    """Run the analysis pipeline on a file (full or quick mode)."""
     path = _validate_file_path(arguments["file_path"])
     yara_rules = arguments.get("yara_rules")
+    mode = arguments.get("mode", "full")
 
-    result = run_pipeline(str(path), yara_rules)
+    result = run_pipeline(str(path), yara_rules=yara_rules, mode=mode)
     report_json = JsonReporter().render(result)
 
     logger.info(
-        "Analysis complete: %s — score=%.1f (%s)",
+        "Analysis complete (%s): %s — score=%.1f (%s)",
+        mode,
         path.name,
         result.ensemble_score,
         result.ensemble_risk_level.value,
@@ -205,15 +223,22 @@ def _handle_analyze_file(arguments: dict) -> list[types.TextContent]:
     return [types.TextContent(type="text", text=report_json)]
 
 
-def _handle_get_binary_annotations(arguments: dict) -> list[types.TextContent]:
-    """Extract binary annotations from a file."""
-    path = _validate_file_path(arguments["file_path"])
+def get_binary_annotations(file_path: str, offset: int = 0, length: int | None = None) -> list[dict[str, Any]]:
+    """Extract binary annotations from a file with optional pagination."""
+    path = _validate_file_path(file_path)
     data = path.read_bytes()
 
     annotator = BinaryAnnotator()
     annotations = annotator.annotate(data)
 
-    output = [
+    if offset > 0 or length is not None:
+        end = offset + length if length is not None else len(data)
+        annotations = [
+            a for a in annotations
+            if a.offset < end and (a.offset + a.length) > offset
+        ]
+
+    return [
         {
             "offset": a.offset,
             "length": a.length,
@@ -222,6 +247,16 @@ def _handle_get_binary_annotations(arguments: dict) -> list[types.TextContent]:
         }
         for a in annotations
     ]
+
+
+def _handle_get_binary_annotations(arguments: dict) -> list[types.TextContent]:
+    """MCP handler for get_binary_annotations."""
+    file_path = arguments["file_path"]
+    offset = int(arguments.get("offset", 0))
+    length = arguments.get("length")
+    length = int(length) if length is not None else None
+
+    output = get_binary_annotations(file_path, offset=offset, length=length)
     return [types.TextContent(type="text", text=json.dumps(output))]
 
 

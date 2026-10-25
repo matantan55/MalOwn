@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "name": "sample_archive.zip",
+    "path": "/Users/matanmishali/AntiGravity/FileAnalysis/tests/fixtures/sample_archive.zip",
+    "size": 355,
+    "size_human": "355.0 B",
+    "mime_type": "",
+    "file_type": "zip",
+    "magic_description": "ZIP archive (application/zip)",
+    "creation_time": "2026-10-25 14:23:17 UTC",
+    "modification_time": "2026-10-25 14:23:17 UTC",
+    "permissions": "rw-r--r--"
+  },
+  "hashes": {
+    "md5": "6c68c44723a5d479b35b8f38e6542677",
+    "sha1": "787c10c7ef39625f8d37831f7f34d7f420751dd4",
+    "sha256": "176cc4599963426515de0116a8474a2ef1bd0cb6a220293ccc9d899b0194ef65",
+    "ssdeep": "6:5jrcR/Algl7g9Psf7Kk+eF2mLKxrtepJ7Esd2+ylc/xodljeFCLuJul//:5jrg/L7g9P+b+xmLKyJ4sk+yG5odxlLX",
+    "imphash": "N/A"
+  },
+  "entropy": {
+    "overall": 5.6926,
+    "sections": {},
+    "is_packed": false,
+    "block_size": 256,
+    "profile": [
+      6.0353,
+      3.9224
+    ]
+  },
+  "strings": {
+    "urls": [],
+    "ips": [],
+    "file_paths": [],
+    "registry_keys": [],
+    "api_calls": [],
+    "email_addresses": [],
+    "crypto_wallets": [],
+    "base64_blobs": [],
+    "shell_commands": [],
+    "suspicious": [],
+    "cve_references": []
+  },
+  "extracted_strings": [],
+  "iocs": [
+    {
+      "type": "hash",
+      "value": "6c68c44723a5d479b35b8f38e6542677",
+      "offset": 0,
+      "length": 355
+    },
+    {
+      "type": "hash",
+      "value": "787c10c7ef39625f8d37831f7f34d7f420751dd4",
+      "offset": 0,
+      "length": 355
+    },
+    {
+      "type": "hash",
+      "value": "176cc4599963426515de0116a8474a2ef1bd0cb6a220293ccc9d899b0194ef65",
+      "offset": 0,
+      "length": 355
+    }
+  ],
+  "sections": [],
+  "indicators": [],
+  "capabilities": [],
+  "yara_matches": [
+    {
+      "rule_name": "Shellcode_API_Hashing_ROR13",
+      "description": "Detects ROR13 API hashing loop used by Metasploit and Cobalt Strike shellcode",
+      "tags": [],
+      "severity": "critical",
+      "matched_strings": [
+        "$ror13_2 at 0x29: \ufffd\ufffd\r"
+      ],
+      "offset": 41,
+      "length": 3,
+      "string_matches": [
+        {
+          "identifier": "$ror13_2",
+          "offset": 41,
+          "length": 3,
+          "data": "\ufffd\ufffd\r"
+        }
+      ]
+    }
+  ],
+  "signature_info": null,
+  "archive_members": [
+    {
+      "filename": "README.txt",
+      "size": 74,
+      "compressed_size": 74,
+      "is_encrypted": false,
+      "password_used": null,
+      "result": {
+        "metadata": {
+          "name": "README.txt",
+          "path": "",
+          "size": 74,
+          "size_human": "74.0 B",
+          "mime_type": "",
+          "file_type": "text",
+          "magic_description": "Text file",
+          "creation_time": "2026-10-25 14:37:39 UTC",
+          "modification_time": "2026-10-25 14:37:39 UTC",
+          "permissions": "rwxr-xr-x"
+        },
+        "hashes": {
+          "md5": "8c163b997081f7d475874444ba68c2a9",
+          "sha1": "789c4c17c764e10e52866b6425a773aea39edd67",
+          "sha256": "c9dea05c147b326c62da4c3a02dc2ae6d0722783918f882a4639ae82eaeec139",
+          "ssdeep": "3:ZJpNSgVATcLpRWAGQgU4hVPj:3pN4TyRHHgU4DL",
+          "imphash": "N/A"
+        },
+        "entropy": {
+          "overall": 4.5128,
+          "sections": {},
+          "is_packed": false,
+          "block_size": 256,
+          "profile": [
+            4.5128
+          ]
+        },
+        "strings": {
+          "urls": [],
+          "ips": [],
+          "file_paths": [],
+          "registry_keys": [],
+          "api_calls": [],
+          "email_addresses": [
+            "security@example.com"
+          ],
+          "crypto_wallets": [],
+          "base64_blobs": [],
+          "shell_commands": [],
+          "suspicious": [],
+          "cve_references": []
+        },
+        "extracted_strings": [
+          {
+            "value": "example.com",
+            "offset": 62,
+            "length": 11,
+            "category": "domain"
+          },
+          {
+            "value": "security@example.com",
+            "offset": 53,
+            "length": 20,
+            "category": "email"
+          }
+        ],
+        "iocs": [
+          {
+            "type": "hash",
+            "value": "8c163b997081f7d475874444ba68c2a9",
+            "offset": 0,
+            "length": 74
+          },
+          {
+            "type": "hash",
+            "value": "789c4c17c764e10e52866b6425a773aea39edd67",
+            "offset": 0,
+            "length": 74
+          },
+          {
+            "type": "hash",
+            "value": "c9dea05c147b326c62da4c3a02dc2ae6d0722783918f882a4639ae82eaeec139",
+            "offset": 0,
+            "length": 74
+          },
+          {
+            "type": "domain",
+            "value": "example.com",
+            "offset": 62,
+            "length": 11
+          },
+          {
+            "type": "email",
+            "value": "security@example.com",
+            "offset": 53,
+            "length": 20
+          }
+        ],
+        "sections": [],
+        "indicators": [],
+        "capabilities": [],
+        "yara_matches": [],
+        "signature_info": null,
+        "archive_members": [],
+        "unpacked_result": null,
+        "is_upx_packed": false,
+        "upx_unpacked": false,
+        "risk_score": 0.0,
+        "risk_level": "clean",
+        "format_info": {},
+        "scoring_method": "triple",
+        "nn_score": 20.0,
+        "nn_risk_level": "clean",
+        "nn_confidence": 0.2,
+        "ml_score": 20.0,
+        "ml_risk_level": "clean",
+        "ml_confidence": 0.2,
+        "ensemble_score": 12.0,
+        "ensemble_risk_level": "clean",
+        "environment_impact": [
+          "No threat capabilities detected. The file appears standard and benign."
+        ],
+        "errors": [],
+        "ai_summary": "The model classified this file as benign primarily due to:\n\u2022 Overall File Entropy (Value: 4.51)\n\u2022 Script File Format (Value: 0)\n\u2022 Embedded Email Addresses (Value: 1)\n\nFinal ML Score: 20.0/100 (20.0% confidence)",
+        "mode": "full"
+      },
+      "error": null
+    },
+    {
+      "filename": "scripts/setup.sh",
+      "size": 53,
+      "compressed_size": 55,
+      "is_encrypted": false,
+      "password_used": null,
+      "result": {
+        "metadata": {
+          "name": "scripts/setup.sh",
+          "path": "",
+          "size": 53,
+          "size_human": "53.0 B",
+          "mime_type": "",
+          "file_type": "script",
+          "magic_description": "Script file (.sh)",
+          "creation_time": "2026-10-25 14:37:39 UTC",
+          "modification_time": "2026-10-25 14:37:39 UTC",
+          "permissions": "rwxr-xr-x"
+        },
+        "hashes": {
+          "md5": "0997066341bcb0ee1bdad1dc63490493",
+          "sha1": "d97cc2338d45cb37b4bdf035650fec82af0ab220",
+          "sha256": "db3be0ef98d3f4d964622d94a4638298a9a4e325621a6b25c92ff94114752f40",
+          "ssdeep": "3:TKH4vABzOsHosAdMBn:h84MB",
+          "imphash": "N/A"
+        },
+        "entropy": {
+          "overall": 4.5135,
+          "sections": {},
+          "is_packed": false,
+          "block_size": 256,
+          "profile": [
+            4.5135
+          ]
+        },
+        "strings": {
+          "urls": [],
+          "ips": [],
+          "file_paths": [
+            "/bin/sh"
+          ],
+          "registry_keys": [],
+          "api_calls": [],
+          "email_addresses": [],
+          "crypto_wallets": [],
+          "base64_blobs": [],
+          "shell_commands": [
+            "#!/bin/sh"
+          ],
+          "suspicious": [],
+          "cve_references": []
+        },
+        "extracted_strings": [
+          {
+            "value": "/bin/sh",
+            "offset": 2,
+            "length": 7,
+            "category": "file_path"
+          },
+          {
+            "value": "#!/bin/sh",
+            "offset": 2,
+            "length": 7,
+            "category": "shell_command"
+          }
+        ],
+        "iocs": [
+          {
+            "type": "hash",
+            "value": "0997066341bcb0ee1bdad1dc63490493",
+            "offset": 0,
+            "length": 53
+          },
+          {
+            "type": "hash",
+            "value": "d97cc2338d45cb37b4bdf035650fec82af0ab220",
+            "offset": 0,
+            "length": 53
+          },
+          {
+            "type": "hash",
+            "value": "db3be0ef98d3f4d964622d94a4638298a9a4e325621a6b25c92ff94114752f40",
+            "offset": 0,
+            "length": 53
+          },
+          {
+            "type": "file_path",
+            "value": "/bin/sh",
+            "offset": 2,
+            "length": 7
+          }
+        ],
+        "sections": [],
+        "indicators": [
+          {
+            "category": "Execution",
+            "name": "Suspicious Shell Commands",
+            "description": "Found 1 suspicious command reference(s).",
+            "evidence": [
+              "#!/bin/sh"
+            ],
+            "severity": 0.6,
+            "offset": 2,
+            "length": 7
+          }
+        ],
+        "capabilities": [],
+        "yara_matches": [],
+        "signature_info": null,
+        "archive_members": [],
+        "unpacked_result": null,
+        "is_upx_packed": false,
+        "upx_unpacked": false,
+        "risk_score": 3.0,
+        "risk_level": "clean",
+        "format_info": {},
+        "scoring_method": "triple",
+        "nn_score": 20.0,
+        "nn_risk_level": "clean",
+        "nn_confidence": 0.2,
+        "ml_score": 20.0,
+        "ml_risk_level": "clean",
+        "ml_confidence": 0.2,
+        "ensemble_score": 13.2,
+        "ensemble_risk_level": "clean",
+        "environment_impact": [
+          "The file has minor suspicious features but no explicit dangerous behavior detected."
+        ],
+        "errors": [],
+        "ai_summary": "The model classified this file as benign primarily due to:\n\u2022 Overall File Entropy (Value: 4.51)\n\u2022 Embedded File Paths (Value: 1)\n\u2022 Embedded Shell Commands (Value: 1)\n\nFinal ML Score: 20.0/100 (20.0% confidence)",
+        "mode": "full"
+      },
+      "error": null
+    }
+  ],
+  "unpacked_result": null,
+  "is_upx_packed": false,
+  "upx_unpacked": false,
+  "risk_score": 30.0,
+  "risk_level": "low",
+  "format_info": {},
+  "scoring_method": "triple",
+  "nn_score": 30.0,
+  "nn_risk_level": "low",
+  "nn_confidence": 0.3,
+  "ml_score": 30.0,
+  "ml_risk_level": "low",
+  "ml_confidence": 0.3,
+  "ensemble_score": 30.0,
+  "ensemble_risk_level": "low",
+  "environment_impact": [
+    "No threat capabilities detected. The file appears standard and benign."
+  ],
+  "errors": [],
+  "ai_summary": "The model classified this file as benign primarily due to:\n\u2022 Maximum Section Entropy (Value: 0.00)\n\u2022 Script File Format (Value: 0)\n\u2022 Average Indicator Severity (Value: 0)\n\nFinal ML Score: 30.0/100 (30.0% confidence)",
+  "mode": "full"
+}

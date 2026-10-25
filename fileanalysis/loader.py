@@ -221,3 +221,25 @@ def load_file(file_path: str) -> tuple[bytes, AnalysisResult]:
     result = AnalysisResult(metadata=metadata)
 
     return file_bytes, result
+
+
+def load_bytes(file_bytes: bytes, file_name: str = "in_memory") -> tuple[bytes, AnalysisResult]:
+    """Prepare an initial AnalysisResult directly from in-memory bytes."""
+    file_size = len(file_bytes)
+    file_type, type_desc = _detect_file_type(file_bytes, file_name)
+
+    now_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    metadata = FileMetadata(
+        name=file_name,
+        path="",
+        size=file_size,
+        size_human=_humanize_size(file_size),
+        mime_type="",
+        file_type=file_type,
+        magic_description=type_desc,
+        creation_time=now_str,
+        modification_time=now_str,
+        permissions="rwxr-xr-x",
+    )
+    return file_bytes, AnalysisResult(metadata=metadata)
+

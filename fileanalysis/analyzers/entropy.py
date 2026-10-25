@@ -24,16 +24,29 @@ class EntropyAnalyzer(BaseAnalyzer):
     def name(self) -> str:
         return "Entropy Analyzer"
 
+    DEFAULT_BLOCK_SIZE = 256
+
     def analyze(self, file_path: str, file_bytes: bytes, result: AnalysisResult) -> None:
-        """Compute overall and per-section entropy."""
+        """Compute overall, per-block profile, and per-section entropy."""
         overall = self._calculate_entropy(file_bytes)
         is_packed = overall >= HIGH_ENTROPY_THRESHOLD
+
+        # Choose appropriate block size: 256 bytes default, 1024 for files > 512 KB to keep profile responsive
+        block_size = 1024 if len(file_bytes) > 512 * 1024 else self.DEFAULT_BLOCK_SIZE
+        profile: list[float] = []
+        if file_bytes and block_size > 0:
+            for offset in range(0, len(file_bytes), block_size):
+                chunk = file_bytes[offset:offset + block_size]
+                profile.append(round(self._calculate_entropy(chunk), 4))
 
         result.entropy = EntropyResult(
             overall=round(overall, 4),
             is_packed=is_packed,
+            block_size=block_size,
+            profile=profile,
         )
 
+        file_len = len(file_bytes)
         if is_packed:
             result.indicators.append(Indicator(
                 category=ThreatCategory.DEFENSE_EVASION,
@@ -44,6 +57,8 @@ class EntropyAnalyzer(BaseAnalyzer):
                 ),
                 evidence=[f"Entropy: {overall:.4f}"],
                 severity=0.7,
+                offset=0,
+                length=file_len,
             ))
         elif overall >= MEDIUM_ENTROPY_THRESHOLD:
             result.indicators.append(Indicator(
@@ -55,6 +70,8 @@ class EntropyAnalyzer(BaseAnalyzer):
                 ),
                 evidence=[f"Entropy: {overall:.4f}"],
                 severity=0.4,
+                offset=0,
+                length=file_len,
             ))
 
     @staticmethod

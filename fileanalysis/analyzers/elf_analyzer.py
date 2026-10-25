@@ -65,8 +65,8 @@ class ELFAnalyzer(BaseAnalyzer):
         try:
             self._parse_headers(binary, result)
             self._analyze_sections(binary, result)
-            self._analyze_imports(binary, result)
-            self._analyze_security_mitigations(binary, result)
+            self._analyze_imports(binary, file_bytes, result)
+            self._analyze_security_mitigations(binary, file_bytes, result)
         except Exception as e:
             result.errors.append(f"Error during ELF analysis: {e}")
 
@@ -139,9 +139,11 @@ class ELFAnalyzer(BaseAnalyzer):
                         f"Size: {section.size}",
                     ],
                     severity=0.6,
+                    offset=section.offset,
+                    length=section.size,
                 ))
 
-    def _analyze_imports(self, binary, result: AnalysisResult) -> None:
+    def _analyze_imports(self, binary, file_bytes: bytes, result: AnalysisResult) -> None:
         """Analyze imported symbols and library dependencies."""
         imports = []
         suspicious_imports = []
@@ -168,15 +170,21 @@ class ELFAnalyzer(BaseAnalyzer):
                 categories.setdefault(cat, []).append((func, desc))
 
             for cat, funcs in categories.items():
+                first_func = funcs[0][0]
+                idx = file_bytes.find(first_func.encode())
+                func_off = idx if idx != -1 else 0
+                func_len = len(first_func) if idx != -1 else 0
                 result.indicators.append(Indicator(
                     category=cat,
                     name=f"Suspicious ELF Imports ({cat.value})",
                     description=f"Found {len(funcs)} suspicious import(s)/syscall(s) related to {cat.value}.",
                     evidence=[f"{func} — {desc}" for func, desc in funcs[:10]],
                     severity=min(0.3 + len(funcs) * 0.1, 0.9),
+                    offset=func_off,
+                    length=func_len,
                 ))
 
-    def _analyze_security_mitigations(self, binary, result: AnalysisResult) -> None:
+    def _analyze_security_mitigations(self, binary, file_bytes: bytes, result: AnalysisResult) -> None:
         """Check for standard ELF binary hardening features."""
         mitigations = {}
 
@@ -217,4 +225,6 @@ class ELFAnalyzer(BaseAnalyzer):
                 description="The ELF binary lacks basic compile-time hardening features, common in malware stubs.",
                 evidence=missing,
                 severity=0.3,
+                offset=0,
+                length=min(len(file_bytes), 64),
             ))

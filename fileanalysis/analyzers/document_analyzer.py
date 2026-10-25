@@ -53,10 +53,16 @@ class DocumentAnalyzer(BaseAnalyzer):
     def _analyze_pdf(self, file_bytes: bytes, result: AnalysisResult) -> None:
         """Scan PDF structure for indicators."""
         found = []
+        first_offset = 0
+        first_length = 0
         for pat, desc in PDF_PATTERNS.items():
-            count = file_bytes.count(pat)
-            if count > 0:
+            idx = file_bytes.find(pat)
+            if idx != -1:
+                count = file_bytes.count(pat)
                 found.append((pat.decode("ascii"), count, desc))
+                if first_length == 0:
+                    first_offset = idx
+                    first_length = len(pat)
 
         if found:
             evidence = [f"Pattern '{pat}' found {count} times — {desc}" for pat, count, desc in found]
@@ -71,17 +77,24 @@ class DocumentAnalyzer(BaseAnalyzer):
                 description="Document contains interactive elements, scripting, or auto-run triggers.",
                 evidence=evidence,
                 severity=severity,
+                offset=first_offset,
+                length=first_length,
             ))
 
     def _analyze_office(self, file_bytes: bytes, result: AnalysisResult) -> None:
         """Scan Office document (OLE or OOXML zip) for macros and active content."""
         found = []
+        first_offset = 0
+        first_length = 0
         for pat, desc in OFFICE_PATTERNS.items():
-            count = file_bytes.count(pat)
-            if count > 0:
-                # Use printable representation of byte pattern
+            idx = file_bytes.find(pat)
+            if idx != -1:
+                count = file_bytes.count(pat)
                 pat_str = pat.decode("ascii", errors="replace")
                 found.append((pat_str, count, desc))
+                if first_length == 0:
+                    first_offset = idx
+                    first_length = len(pat)
 
         if found:
             evidence = [f"Pattern '{pat}' found {count} times — {desc}" for pat, count, desc in found]
@@ -95,4 +108,6 @@ class DocumentAnalyzer(BaseAnalyzer):
                 description="The Office document contains macro project markers or auto-run triggers.",
                 evidence=evidence,
                 severity=severity,
+                offset=first_offset,
+                length=first_length,
             ))

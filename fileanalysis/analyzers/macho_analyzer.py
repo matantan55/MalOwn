@@ -60,20 +60,20 @@ class MachOAnalyzer(BaseAnalyzer):
                 result.format_info["slice_count"] = len(binary.binaries)
                 # Analyze the first slice
                 if len(binary.binaries) > 0:
-                    self._analyze_single_binary(binary.binaries[0], result)
+                    self._analyze_single_binary(binary.binaries[0], file_bytes, result)
             else:
                 result.format_info["is_universal"] = False
-                self._analyze_single_binary(binary, result)
+                self._analyze_single_binary(binary, file_bytes, result)
 
         except Exception as e:
             result.errors.append(f"Mach-O parsing error: {e}")
 
-    def _analyze_single_binary(self, binary, result: AnalysisResult) -> None:
+    def _analyze_single_binary(self, binary, file_bytes: bytes, result: AnalysisResult) -> None:
         """Analyze a parsed single Mach-O binary."""
         self._parse_headers(binary, result)
         self._analyze_sections(binary, result)
-        self._analyze_imports(binary, result)
-        self._check_code_signature(binary, result)
+        self._analyze_imports(binary, file_bytes, result)
+        self._check_code_signature(binary, file_bytes, result)
 
     def _parse_headers(self, binary, result: AnalysisResult) -> None:
         """Parse Mach-O headers for metadata."""
@@ -141,15 +141,21 @@ class MachOAnalyzer(BaseAnalyzer):
                 categories.setdefault(cat, []).append((func, desc))
 
             for cat, funcs in categories.items():
+                first_func = funcs[0][0]
+                idx = file_bytes.find(first_func.encode())
+                func_off = idx if idx != -1 else 0
+                func_len = len(first_func) if idx != -1 else 0
                 result.indicators.append(Indicator(
                     category=cat,
                     name=f"Suspicious macOS Imports ({cat.value})",
                     description=f"Found {len(funcs)} suspicious macOS API import(s) related to {cat.value}.",
                     evidence=[f"{func} — {desc}" for func, desc in funcs[:10]],
                     severity=min(0.3 + len(funcs) * 0.1, 0.9),
+                    offset=func_off,
+                    length=func_len,
                 ))
 
-    def _check_code_signature(self, binary, result: AnalysisResult) -> None:
+    def _check_code_signature(self, binary, file_bytes: bytes, result: AnalysisResult) -> None:
         """Check for code signing information."""
         info = result.format_info
 
@@ -170,4 +176,6 @@ class MachOAnalyzer(BaseAnalyzer):
                 ),
                 evidence=["Missing CodeSignature load command"],
                 severity=0.5,
+                offset=0,
+                length=min(len(file_bytes), 32),
             ))

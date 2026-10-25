@@ -20,42 +20,58 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL_PATH = Path(__file__).parent / "threat_model_lgb.txt"
 DEFAULT_SCALER_PATH = Path(__file__).parent / "feature_scaler.npz"
 
+import threading
+
+_LGB_CACHE: dict[Path, lgb.Booster] = {}
+_SCALER_CACHE: dict[Path, tuple[np.ndarray, np.ndarray]] = {}
+_LGB_LOCK = threading.Lock()
+
 
 class LightGBMThreatScorer:
     """Gradient-Boosted Tree-based threat scorer.
 
-    Loads a pre-trained LightGBM model and uses it to score files.
+    Loads a pre-trained LightGBM model once and uses it thread-safely across files.
     Falls back to a clear error if LightGBM is unavailable or weights are missing.
     """
 
     def __init__(self, model_path: str | Path | None = None) -> None:
-        self.model_path = Path(model_path) if model_path else DEFAULT_MODEL_PATH
+        self.model_path = Path(model_path).resolve() if model_path else DEFAULT_MODEL_PATH.resolve()
         self.scaler_path = self.model_path.parent / "feature_scaler.npz"
         self.extractor = FeatureExtractor()
         self.feat_mean, self.feat_std = self._load_scaler()
         self.model = self._load_model()
 
     def _load_scaler(self):
-        """Load saved feature normalization parameters."""
-        if self.scaler_path.exists():
-            data = np.load(self.scaler_path)
-            logger.info("Loaded feature scaler from %s", self.scaler_path)
-            return data["mean"], data["std"]
-        else:
-            logger.warning("No feature scaler found at %s, using raw features", self.scaler_path)
-            return np.zeros(NUM_FEATURES, dtype=np.float32), np.ones(NUM_FEATURES, dtype=np.float32)
+        """Load saved feature normalization parameters (cached singleton)."""
+        with _LGB_LOCK:
+            if self.scaler_path in _SCALER_CACHE:
+                return _SCALER_CACHE[self.scaler_path]
+            if self.scaler_path.exists():
+                data = np.load(self.scaler_path)
+                logger.info("Loaded feature scaler from %s", self.scaler_path)
+                res = (data["mean"], data["std"])
+            else:
+                logger.warning("No feature scaler found at %s, using raw features", self.scaler_path)
+                res = (np.zeros(NUM_FEATURES, dtype=np.float32), np.ones(NUM_FEATURES, dtype=np.float32))
+            _SCALER_CACHE[self.scaler_path] = res
+            return res
 
     def _load_model(self):
-        """Load the LightGBM model with pre-trained weights."""
-        if not self.model_path.exists():
-            raise FileNotFoundError(
-                f"Model weights not found at {self.model_path}. "
-                f"Run 'python -m fileanalysis.scoring.sandbox_train' to generate them."
-            )
+        """Load the LightGBM model with pre-trained weights (cached singleton)."""
+        with _LGB_LOCK:
+            if self.model_path in _LGB_CACHE:
+                return _LGB_CACHE[self.model_path]
 
-        model = lgb.Booster(model_file=str(self.model_path))
-        logger.info("Loaded LightGBM model from %s", self.model_path)
-        return model
+            if not self.model_path.exists():
+                raise FileNotFoundError(
+                    f"Model weights not found at {self.model_path}. "
+                    f"Run 'python -m fileanalysis.scoring.sandbox_train' to generate them."
+                )
+
+            model = lgb.Booster(model_file=str(self.model_path))
+            logger.info("Loaded LightGBM model from %s", self.model_path)
+            _LGB_CACHE[self.model_path] = model
+            return model
 
     def calculate_score(self, result: AnalysisResult) -> None:
         """Run ML inference on the AnalysisResult and set ml_score/ml_risk_level.
