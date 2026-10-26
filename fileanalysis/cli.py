@@ -32,7 +32,13 @@ from fileanalysis.research.hex_viewer import HexViewer
 
 console = Console(stderr=True)
 
-def run_analysis(file_path: str, json_format: bool, yara_rules: str | None, quick: bool = False) -> None:
+def run_analysis(
+    file_path: str,
+    json_format: bool,
+    yara_rules: str | None,
+    quick: bool = False,
+    passwords: list[str] | None = None,
+) -> None:
     """Run scanning analysis (full or quick mode)."""
     show_progress = not json_format
     mode = "quick" if quick else "full"
@@ -50,7 +56,7 @@ def run_analysis(file_path: str, json_format: bool, yara_rules: str | None, quic
         disable=not show_progress,
     ) as progress:
         t_pipeline = progress.add_task("🔬 Running analysis pipeline…", total=1)
-        result = run_pipeline(file_path, yara_rules=yara_rules, mode=mode)
+        result = run_pipeline(file_path, yara_rules=yara_rules, mode=mode, passwords=passwords)
         progress.advance(t_pipeline)
 
     # Render report
@@ -196,7 +202,15 @@ def interactive_menu():
 @click.option("--quick", is_flag=True, help="Run in quick mode (skips MalConv, LightGBM, and SHAP; runs heuristics, hashes, entropy, strings, headers, and YARA).")
 @click.option("--research", is_flag=True, help="Open interactive hex viewer with binary annotations.")
 @click.option("--yara-rules", type=click.Path(file_okay=False), help="Custom directory containing YARA rules (.yar/.yara).")
-def cli(file_path: str | None, json_format: bool, quick: bool, research: bool, yara_rules: str | None) -> None:
+@click.option("-p", "--password", "passwords", multiple=True, help="Password for encrypted archive members (can be specified multiple times).")
+def cli(
+    file_path: str | None,
+    json_format: bool,
+    quick: bool,
+    research: bool,
+    yara_rules: str | None,
+    passwords: tuple[str, ...],
+) -> None:
     """Analyze a file for malicious indicators, capabilities, and threat environment impact."""
     if not file_path:
         # Interactive mode
@@ -207,7 +221,13 @@ def cli(file_path: str | None, json_format: bool, quick: bool, research: bool, y
             viewer = HexViewer(file_path)
             viewer.run()
         else:
-            run_analysis(file_path, json_format, yara_rules, quick=quick)
+            run_analysis(
+                file_path,
+                json_format,
+                yara_rules,
+                quick=quick,
+                passwords=list(passwords) if passwords else None,
+            )
 
 if __name__ == "__main__":
     cli()

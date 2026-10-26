@@ -8,13 +8,12 @@ import tempfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
-
 # Prevent OpenMP segmentation fault on macOS when LightGBM and PyTorch coexist
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["OMP_NUM_THREADS"] = "1"
 
 from fileanalysis.loader import load_file, load_bytes
-from fileanalysis.analyzers.base import AnalysisResult, RiskLevel, ThreatCategory
+from fileanalysis.analyzers.base import AnalysisResult, RiskLevel, ThreatCategory, Indicator
 from fileanalysis.analyzers.dll_analyzer import DLLAnalyzer
 from fileanalysis.analyzers.document_analyzer import DocumentAnalyzer
 from fileanalysis.analyzers.elf_analyzer import ELFAnalyzer
@@ -25,7 +24,7 @@ from fileanalysis.analyzers.pe_analyzer import PEAnalyzer
 from fileanalysis.analyzers.script_analyzer import ScriptAnalyzer
 from fileanalysis.analyzers.strings import StringAnalyzer
 from fileanalysis.analyzers.upx import is_upx_packed, unpack_upx_bytes
-from fileanalysis.analyzers.archive import is_zip_archive, inspect_archive
+from fileanalysis.analyzers.archive import is_zip_archive, inspect_archive, MAX_DEPTH
 from fileanalysis.intelligence.capability_mapper import CapabilityMapper
 from fileanalysis.intelligence.yara_scanner import YaraScanner
 from fileanalysis.scoring.scorer import ThreatScorer
@@ -103,6 +102,8 @@ def run_pipeline(
     yara_rules: str | None = None,
     passwords: Optional[List[str]] = None,
     is_subanalysis: bool = False,
+    archive_depth: int = 1,
+    archive_bytes_tracker: Optional[List[int]] = None,
 ) -> AnalysisResult:
     """Execute analysis pipeline and return a populated AnalysisResult.
 
@@ -113,9 +114,14 @@ def run_pipeline(
         mode: "full" (all ML + neural net + SHAP) or "quick" (heuristics, hashes, entropy, strings, headers, YARA).
         yara_rules: Optional path to custom YARA rules directory or file.
         passwords: Optional list of passwords for encrypted archive members.
-        is_subanalysis: Set to True for nested unpacked/archive members to avoid recursion.
+        is_subanalysis: Set to True for nested unpacked UPX members to avoid recursion.
+        archive_depth: Current recursion depth in nested archive trees.
+        archive_bytes_tracker: Shared mutable list tracking total unpacked bytes across the archive tree.
     """
     logger.info("Starting analysis pipeline (mode=%s) for: %s", mode, file_path or file_name)
+
+    if archive_bytes_tracker is None:
+        archive_bytes_tracker = [0]
 
     # 1. Load file bytes & initial AnalysisResult
     created_temp_file = False
@@ -238,26 +244,60 @@ def run_pipeline(
                 result.errors.append(unpack_err)
 
         # 10. In-memory ZIP archive member inspection
-        if not is_subanalysis and is_zip_archive(loaded_bytes, result.metadata.name):
-            member_results, arch_indicators = inspect_archive(
-                loaded_bytes,
-                pipeline_fn=run_pipeline,
-                passwords=passwords,
-                mode=mode,
-                yara_rules=yara_rules,
-            )
-            result.archive_members = member_results
-            result.indicators.extend(arch_indicators)
-
-            # Elevate ensemble score if any member has high threat score
-            if member_results:
-                max_member_score = max(
-                    (m.result.get("ensemble_score", 0.0) for m in member_results if m.result),
-                    default=0.0,
+        if is_zip_archive(loaded_bytes, result.metadata.name):
+            if archive_depth > MAX_DEPTH:
+                logger.warning("Reached maximum archive recursion depth (%d)", MAX_DEPTH)
+                result.indicators.append(Indicator(
+                    category=ThreatCategory.DEFENSE_EVASION,
+                    name="Archive Bomb: Maximum Depth Exceeded",
+                    description=(
+                        f"Archive recursion reached maximum depth ({MAX_DEPTH}). "
+                        "Stopping nested extraction to protect against decompression bombs."
+                    ),
+                    evidence=[f"Depth: {archive_depth}", f"Max Depth: {MAX_DEPTH}"],
+                    severity=0.85,
+                    offset=0,
+                    length=len(loaded_bytes),
+                ))
+            else:
+                member_results, arch_indicators = inspect_archive(
+                    loaded_bytes,
+                    pipeline_fn=run_pipeline,
+                    passwords=passwords,
+                    mode=mode,
+                    yara_rules=yara_rules,
+                    current_depth=archive_depth,
+                    bytes_tracker=archive_bytes_tracker,
                 )
-                if max_member_score > result.ensemble_score:
-                    result.ensemble_score = round(max_member_score, 1)
-                    result.ensemble_risk_level = _classify_risk_level(result.ensemble_score)
+                result.archive_members = member_results
+                result.indicators.extend(arch_indicators)
+
+                # Bubble up Archive Bomb indicators from nested members
+                for m in member_results:
+                    if m.result and "indicators" in m.result:
+                        for ind in m.result["indicators"]:
+                            ind_name = ind.get("name", "") if isinstance(ind, dict) else getattr(ind, "name", "")
+                            if "Archive Bomb" in ind_name:
+                                if not any(existing.name == ind_name for existing in result.indicators):
+                                    result.indicators.append(Indicator(
+                                        category=ThreatCategory.DEFENSE_EVASION,
+                                        name=ind_name,
+                                        description=ind.get("description", "") if isinstance(ind, dict) else getattr(ind, "description", ""),
+                                        evidence=[f"Found in nested member: {m.filename}"],
+                                        severity=0.85,
+                                        offset=0,
+                                        length=len(loaded_bytes),
+                                    ))
+
+                # Elevate ensemble score if any member has high threat score
+                if member_results:
+                    max_member_score = max(
+                        (m.result.get("ensemble_score", 0.0) for m in member_results if m.result),
+                        default=0.0,
+                    )
+                    if max_member_score > result.ensemble_score:
+                        result.ensemble_score = round(max_member_score, 1)
+                        result.ensemble_risk_level = _classify_risk_level(result.ensemble_score)
 
     finally:
         if created_temp_file and temp_path and temp_path.exists():

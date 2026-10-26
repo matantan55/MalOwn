@@ -214,7 +214,6 @@ class TestProject0Features(unittest.TestCase):
 
         try:
             with zipfile.ZipFile(zip_path, "w") as zf:
-                # Add 120 tiny files (limit is 100)
                 for i in range(120):
                     zf.writestr(f"file_{i:03d}.txt", b"A" * 10)
 
@@ -226,6 +225,87 @@ class TestProject0Features(unittest.TestCase):
         finally:
             if os.path.exists(zip_path):
                 os.unlink(zip_path)
+
+    def test_nested_archive_depth_limit(self):
+        """Nested ZIP archives beyond MAX_DEPTH (3) must stop recursion and emit an indicator."""
+        with tempfile.TemporaryDirectory() as td:
+            p4 = os.path.join(td, "level4.zip")
+            with zipfile.ZipFile(p4, "w") as z:
+                z.writestr("payload.txt", b"level 4 payload")
+
+            p3 = os.path.join(td, "level3.zip")
+            with zipfile.ZipFile(p3, "w") as z:
+                z.write(p4, "level4.zip")
+
+            p2 = os.path.join(td, "level2.zip")
+            with zipfile.ZipFile(p2, "w") as z:
+                z.write(p3, "level3.zip")
+
+            p1 = os.path.join(td, "outer.zip")
+            with zipfile.ZipFile(p1, "w") as z:
+                z.write(p2, "level2.zip")
+
+            res = analyze(p1, mode="quick")
+            has_depth_indicator = any("Maximum Depth Exceeded" in ind.name for ind in res.indicators)
+            self.assertTrue(has_depth_indicator, "Should report Maximum Depth Exceeded indicator on outer archive")
+
+    def test_nested_encrypted_archive_password_propagation(self):
+        """Passwords (including default 'infected') must reach nested archive members."""
+        with tempfile.TemporaryDirectory() as td:
+            secret_file = os.path.join(td, "secret.txt")
+            with open(secret_file, "w") as f:
+                f.write("flag{nested_encrypted_archive_success}")
+
+            inner_zip = os.path.join(td, "inner_encrypted.zip")
+            outer_zip = os.path.join(td, "outer.zip")
+
+            # Create password-protected inner zip with 'infected'
+            proc = subprocess.run(
+                ["zip", "-q", "-P", "infected", inner_zip, "secret.txt"],
+                cwd=td,
+                capture_output=True,
+            )
+            if proc.returncode != 0:
+                self.skipTest("zip utility unavailable for encrypted test fixture")
+
+            # Wrap in outer unencrypted zip
+            with zipfile.ZipFile(outer_zip, "w") as z:
+                z.write(inner_zip, "inner_encrypted.zip")
+
+            # Analyze without explicitly passing passwords (tests default 'infected' propagation)
+            res = analyze(outer_zip, mode="quick")
+            self.assertEqual(len(res.archive_members), 1)
+            outer_member = res.archive_members[0]
+            self.assertEqual(outer_member.filename, "inner_encrypted.zip")
+            self.assertIsNotNone(outer_member.result)
+
+            nested_members = outer_member.result.get("archive_members", [])
+            self.assertEqual(len(nested_members), 1)
+            inner_member = nested_members[0]
+            self.assertEqual(inner_member["filename"], "secret.txt")
+            self.assertTrue(inner_member["is_encrypted"])
+            self.assertEqual(inner_member["password_used"], "infected")
+
+    def test_nested_archive_running_bytes_tracker(self):
+        """Total unpacked bytes limit must be shared across the entire archive tree."""
+        from fileanalysis.analyzers.archive import inspect_archive
+
+        tracker = [0]
+        # Simulate an archive with members, verifying tracker increments across calls
+        data1 = b"A" * 5000
+        data2 = b"B" * 3000
+
+        with tempfile.NamedTemporaryFile(suffix=".zip") as tf:
+            with zipfile.ZipFile(tf.name, "w") as z:
+                z.writestr("file1.bin", data1)
+                z.writestr("file2.bin", data2)
+
+            with open(tf.name, "rb") as f:
+                raw_zip = f.read()
+
+            inspect_archive(raw_zip, pipeline_fn=run_pipeline, mode="quick", bytes_tracker=tracker)
+            # Tracker should accumulate the extracted bytes
+            self.assertEqual(tracker[0], len(data1) + len(data2))
 
     # ─── 7. Authenticode Digital Signature Check ────────────────────────────────
 

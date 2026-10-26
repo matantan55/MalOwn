@@ -44,11 +44,12 @@ def is_zip_archive(file_bytes: bytes, file_name: str = "") -> bool:
 
 def inspect_archive(
     file_bytes: bytes,
-    pipeline_fn: Callable[[str | None, bytes, str, str, str | None], AnalysisResult],
+    pipeline_fn: Callable[..., AnalysisResult],
     passwords: Optional[List[str]] = None,
     mode: str = "full",
     yara_rules: Optional[str] = None,
     current_depth: int = 1,
+    bytes_tracker: Optional[List[int]] = None,
 ) -> tuple[List[ArchiveMemberResult], List[Indicator]]:
     """Analyze all members of a ZIP archive in memory safely.
 
@@ -59,15 +60,36 @@ def inspect_archive(
         mode: Analysis mode ('full' or 'quick').
         yara_rules: Custom YARA rules directory or None.
         current_depth: Recursion depth.
+        bytes_tracker: Shared mutable list tracking total unpacked bytes across the entire archive tree.
 
     Returns:
         Tuple of (member_results, indicators).
     """
     if current_depth > MAX_DEPTH:
         logger.warning("Reached maximum archive recursion depth (%d)", MAX_DEPTH)
-        return [], []
+        return [], [
+            Indicator(
+                category=ThreatCategory.DEFENSE_EVASION,
+                name="Archive Bomb: Maximum Depth Exceeded",
+                description=(
+                    f"Archive recursion reached maximum depth ({MAX_DEPTH}). "
+                    "Stopping nested extraction to protect against decompression bombs."
+                ),
+                evidence=[f"Depth: {current_depth}", f"Max Depth: {MAX_DEPTH}"],
+                severity=0.85,
+                offset=0,
+                length=len(file_bytes),
+            )
+        ]
 
-    pwd_candidates = (passwords or []) + DEFAULT_ARCHIVE_PASSWORDS
+    if bytes_tracker is None:
+        bytes_tracker = [0]
+
+    pwd_candidates: list[str] = list(passwords or [])
+    for p in DEFAULT_ARCHIVE_PASSWORDS:
+        if p not in pwd_candidates:
+            pwd_candidates.append(p)
+
     # Ensure bytes versions of passwords without duplicates
     raw_passwords: list[bytes] = []
     for p in pwd_candidates:
@@ -77,7 +99,6 @@ def inspect_archive(
 
     member_results: list[ArchiveMemberResult] = []
     indicators: list[Indicator] = []
-    total_unpacked = 0
 
     try:
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
@@ -125,8 +146,8 @@ def inspect_archive(
                     ))
                     continue
 
-                # Guard against total size limits
-                if total_unpacked + file_size > MAX_TOTAL_UNPACKED_BYTES:
+                # Guard against total size limits across the whole tree
+                if bytes_tracker[0] + file_size > MAX_TOTAL_UNPACKED_BYTES:
                     member_results.append(ArchiveMemberResult(
                         filename=filename,
                         size=file_size,
@@ -137,8 +158,12 @@ def inspect_archive(
                     indicators.append(Indicator(
                         category=ThreatCategory.DEFENSE_EVASION,
                         name="Archive Bomb: Total Size Limit Exceeded",
-                        description="Archive contents exceed maximum total unpacked size.",
-                        evidence=[f"Total unpacked: {total_unpacked} bytes"],
+                        description=f"Archive tree contents exceed maximum total unpacked size ({MAX_TOTAL_UNPACKED_BYTES} bytes).",
+                        evidence=[
+                            f"Total unpacked so far: {bytes_tracker[0]} bytes",
+                            f"Member size: {file_size} bytes",
+                            f"Limit: {MAX_TOTAL_UNPACKED_BYTES} bytes",
+                        ],
                         severity=0.8,
                         offset=0,
                         length=len(file_bytes),
@@ -187,17 +212,30 @@ def inspect_archive(
                     ))
                     continue
 
-                total_unpacked += len(data)
+                bytes_tracker[0] += len(data)
 
                 # Run analysis pipeline on the unpacked member bytes
                 try:
-                    member_res = pipeline_fn(
-                        None,             # file_path
-                        data,             # file_bytes
-                        filename,         # file_name
-                        mode,             # mode
-                        yara_rules,       # yara_rules
-                    )
+                    try:
+                        member_res = pipeline_fn(
+                            file_path=None,
+                            file_bytes=data,
+                            file_name=filename,
+                            mode=mode,
+                            yara_rules=yara_rules,
+                            passwords=pwd_candidates,
+                            is_subanalysis=False,
+                            archive_depth=current_depth + 1,
+                            archive_bytes_tracker=bytes_tracker,
+                        )
+                    except TypeError:
+                        member_res = pipeline_fn(
+                            None,
+                            data,
+                            filename,
+                            mode,
+                            yara_rules,
+                        )
                     from fileanalysis.reporting.json_report import JsonReporter
                     member_dict = asdict(member_res)
                     # Convert enums for consistency

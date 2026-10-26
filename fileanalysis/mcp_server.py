@@ -86,6 +86,11 @@ async def list_tools() -> list[types.Tool]:
                             "YARA rule files (.yar/.yara) to merge with built-in rules."
                         ),
                     },
+                    "passwords": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of passwords to try for encrypted archive members.",
+                    },
                 },
                 "required": ["file_path"],
             },
@@ -209,8 +214,9 @@ def _handle_analyze_file(arguments: dict) -> list[types.TextContent]:
     path = _validate_file_path(arguments["file_path"])
     yara_rules = arguments.get("yara_rules")
     mode = arguments.get("mode", "full")
+    passwords = arguments.get("passwords")
 
-    result = run_pipeline(str(path), yara_rules=yara_rules, mode=mode)
+    result = run_pipeline(str(path), yara_rules=yara_rules, mode=mode, passwords=passwords)
     report_json = JsonReporter().render(result)
 
     logger.info(

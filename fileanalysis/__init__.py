@@ -16,7 +16,7 @@ from fileanalysis.analyzers.base import (
 )
 from fileanalysis.pipeline import analyze, run_pipeline
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __all__ = [
     "analyze",
     "run_pipeline",

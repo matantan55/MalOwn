@@ -103,8 +103,8 @@
           "mime_type": "",
           "file_type": "text",
           "magic_description": "Text file",
-          "creation_time": "2026-10-25 14:37:39 UTC",
-          "modification_time": "2026-10-25 14:37:39 UTC",
+          "creation_time": "2026-10-26 16:29:36 UTC",
+          "modification_time": "2026-10-26 16:29:36 UTC",
           "permissions": "rwxr-xr-x"
         },
         "hashes": {
@@ -229,8 +229,8 @@
           "mime_type": "",
           "file_type": "script",
           "magic_description": "Script file (.sh)",
-          "creation_time": "2026-10-25 14:37:39 UTC",
-          "modification_time": "2026-10-25 14:37:39 UTC",
+          "creation_time": "2026-10-26 16:29:36 UTC",
+          "modification_time": "2026-10-26 16:29:36 UTC",
           "permissions": "rwxr-xr-x"
         },
         "hashes": {
